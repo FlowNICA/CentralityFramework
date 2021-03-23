@@ -126,6 +126,7 @@ float Glauber::Fitter::Nancestors(float f) const
     else if  (fMode == "PSD")        return f-fNpart;
     else if  (fMode == "Npart")      return TMath::Power(fNpart, f); 
     else if  (fMode == "Ncoll")      return TMath::Power(fNcoll, f);
+    else if  (fMode == "STAR")       return (1-f)*fNpart/2. + f*fNcoll;
     
     return -1.;
 }
@@ -139,6 +140,7 @@ float Glauber::Fitter::NancestorsMax(float f) const
     else if  (fMode == "PSD")        return f;
     else if  (fMode == "Npart")      return TMath::Power(NpartMax, f); 
     else if  (fMode == "Ncoll")      return TMath::Power(NcollMax, f);
+    else if  (fMode == "STAR")       return (1-f)*NpartMax/2. + f*NcollMax;
     
     return -1.;
 }

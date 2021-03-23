@@ -1,0 +1,14 @@
+Glauber_file: Path-to-Glauber-file
+Glauber_treename: nt_Au3_Au3 or nt_Bi_Bi
+RefMult_file: Path-to-RefMult-file
+RefMult_histname: hRefMultSTAR
+NumberOfIterations: 5
+f_min: fminfmin
+f_max: fmaxfmax
+f_step: 0.01
+k_min: kminkmin
+k_max: kmaxkmax
+k_step: 1
+Mult_min: multminmultmin
+Mult_max: multmaxmultmax
+Mode: Default

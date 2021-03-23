@@ -31,6 +31,7 @@ int main(int argc, char *argv[])
     std::string input_glauber_treename;
     std::string input_refmult_file;
     std::string input_refmult_histname;
+    std::string input_glauber_mode;
     std::vector<std::string> str_name;
     std::string str;
 
@@ -70,6 +71,8 @@ int main(int argc, char *argv[])
     str_name.push_back(str);
 		configfile >> str >> max_bin;
     str_name.push_back(str);
+    configfile >> str >> input_glauber_mode;
+    str_name.push_back(str);
 
     configfile.close();
 
@@ -89,6 +92,7 @@ int main(int argc, char *argv[])
     std::cout << str_name.at(i_param++) << " " << k_step << std::endl;
     std::cout << str_name.at(i_param++) << " " << min_bin << std::endl;
     std::cout << str_name.at(i_param++) << " " << max_bin << std::endl;
+    std::cout << str_name.at(i_param++) << " " << input_glauber_mode << std::endl;
     std::cout << std::endl;
 
     str_name.clear();
@@ -114,7 +118,7 @@ int main(int argc, char *argv[])
     ///  |    PSD    |       f-Npart          |
     ///  |   Npart   |       Npart^f          |
     ///  |   Ncoll   |       Ncoll^f          |
-    const TString mode = "Default";
+    const TString mode = input_glauber_mode.c_str();
     
 
     const TString glauber_filename    = TString(input_glauber_file.c_str());   // path to file with glauber tree

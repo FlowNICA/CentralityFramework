@@ -1,8 +1,9 @@
 void HistoCut(Int_t CentralityClasses){
-	TFile *f1 = new TFile("/home/segal/NICA/NICA/centrality-master/build/Result/glauber_qa_11GeV.root");
-	TFile *f2 = new TFile("/home/segal/NICA/Mult_k_tracks_mpd.root");
+	TFile *f1 = new TFile("/weekly/parfenov/Soft/Centrality/OUT/new_recoUrQMD_STARlike_7gev_bibi_NoSecondary/2443540/file/root/glauber_qa.root");
+	TFile *f2 = new TFile("/weekly/parfenov/Soft/Centrality/OUT/new_recoUrQMD_STARlike_7gev_bibi_NoSecondary/2443540/file/root/glauber_qa.root");
 	TH1F *FitHisto=(TH1F*)f1->Get("glaub_fit_histo");
-	TH1F *DataHisto=(TH1F*)f2->Get("h_Mult");
+	TH1F *DataHisto=(TH1F*)f2->Get("hRefMultSTAR");
+	//TH1F *DataHisto=(TH1F*)f2->Get("hNpart0");
 
 	Int_t bins = FitHisto->GetNbinsX();
 	cout<<"bins="<<bins<<endl;

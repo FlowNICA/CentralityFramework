@@ -1,6 +1,6 @@
 void CentralityClasses(Int_t CentralityClasses){
-	TFile *f1 = new TFile("/home/segal/NICA/NICA/centrality-master/build/Result/HistoCutResult_11GeV.root");
-	TFile *f5 = new TFile("/home/segal/NICA/NICA/centrality-master/build/Result/glauber_qa_11GeV.root");
+	TFile *f1 = new TFile("/weekly/parfenov/Soft/Centrality/OUT/new_recoUrQMD_STARlike_7gev_bibi_NoSecondary/2443540/file/root/HistoCutResult.root");
+	TFile *f5 = new TFile("/weekly/parfenov/Soft/Centrality/OUT/new_recoUrQMD_STARlike_7gev_bibi_NoSecondary/2443540/file/root/glauber_qa.root");
 	TTree *Borders=(TTree*)f1->Get("Borders");
 	
 	TFile *fOut   = new TFile("FINAL.root", "recreate");
