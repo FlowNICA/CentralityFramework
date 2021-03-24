@@ -54,8 +54,11 @@ void printFinal(TString inFileName="", TString outFileName="")
     std::vector<std::pair<Float_t, Float_t>> vNpart;
     std::vector<std::pair<Float_t, Float_t>> vNcoll;
     std::vector<Float_t> vBavg;
+    std::vector<Float_t> vBavgRMS;
     std::vector<Float_t> vNpartavg;
+    std::vector<Float_t> vNpartavgRMS;
     std::vector<Float_t> vNcollavg;
+    std::vector<Float_t> vNcollavgRMS;
 
     Int_t Nclasses = Result->GetEntries();
 
@@ -70,18 +73,26 @@ void printFinal(TString inFileName="", TString outFileName="")
     // Read averaged values
     for (int i=0; i<hBavg->GetNbinsX(); i++)
     {
-        if (hBavg->GetBinContent(i+1) != 0)
+        if (hBavg->GetBinContent(i+1) != 0){
             vBavg.push_back(hBavg->GetBinContent(i+1));
+            vBavgRMS.push_back(hBavg->GetBinError(i+1));
+        }
     }
     for (int i=0; i<hNpartavg->GetNbinsX(); i++)
     {
         if (hNpartavg->GetBinContent(i+1) != 0)
+        {
             vNpartavg.push_back(hNpartavg->GetBinContent(i+1));
+            vNpartavgRMS.push_back(hNpartavg->GetBinError(i+1));
+        }
     }
     for (int i=0; i<hNcollavg->GetNbinsX(); i++)
     {
         if (hNcollavg->GetBinContent(i+1) != 0)
+        {
             vNcollavg.push_back(hNcollavg->GetBinContent(i+1));
+            vNcollavgRMS.push_back(hNcollavg->GetBinError(i+1));
+        }
     }
 
     // Fitting mean values with pol5 function
@@ -126,18 +137,18 @@ void printFinal(TString inFileName="", TString outFileName="")
     if (isTypeSimple)
     {
         std::cout << "File: " << inFileName.Data() << "." << std::endl;
-        std::cout << "Cent, %   | Mult_min | Mult_max | <b>, fm | bmin, fm | bmax, fm | <Npart> | Npart_min | Npart_max | <Ncoll> | Ncoll_min | Ncoll_max |" << std::endl;
-        std::cout << "----------|----------|----------|---------|----------|----------|---------|-----------|-----------|---------|-----------|-----------|" << std::endl;
+        std::cout << "Cent, %   | Mult_min | Mult_max | <b>, fm |   RMS   | bmin, fm | bmax, fm | <Npart> |   RMS   | Npart_min | Npart_max | <Ncoll> |   RMS   | Ncoll_min | Ncoll_max |" << std::endl;
+        std::cout << "----------|----------|----------|---------|---------|----------|----------|---------|---------|-----------|-----------|---------|---------|-----------|-----------|" << std::endl;
         for (int i=0; i<NreasonableClasses; i++)
         {
-            std::cout << Form("%3.0f - %3.0f | %8i | %8i | %7.2f | %8.2f | %8.2f | %7.2f | %9.2f | %9.2f | %7.2f | %9.2f | %9.2f |", 
+            std::cout << Form("%3.0f - %3.0f | %8i | %8i | %7.2f | %7.2f | %8.2f | %8.2f | %7.2f | %7.2f | %9.2f | %9.2f | %7.2f | %7.2f | %9.2f | %9.2f |", 
                 vCent.at(i).first, vCent.at(i).second,
                 vBorders.at(i).first, vBorders.at(i).second,
-                vBavg.at(i), vBimp.at(i).first, vBimp.at(i).second,
-                vNpartavg.at(i), vNpart.at(i).second, vNpart.at(i).first,
-                vNcollavg.at(i), vNcoll.at(i).second, vNcoll.at(i).first) << std::endl;
+                vBavg.at(i), vBavgRMS.at(i), vBimp.at(i).first, vBimp.at(i).second,
+                vNpartavg.at(i), vNpartavgRMS.at(i), vNpart.at(i).second, vNpart.at(i).first,
+                vNcollavg.at(i), vNcollavgRMS.at(i), vNcoll.at(i).second, vNcoll.at(i).first) << std::endl;
         }
-        std::cout << "-------------------------------------------------------------------------------------------------------------------------------------" << std::endl;
+        std::cout << "-------------------------------------------------------------------------------------------------------------------------------------------------------------------" << std::endl;
     }
     
     // Output for isTypeLatex case
@@ -157,18 +168,18 @@ void printFinal(TString inFileName="", TString outFileName="")
         myfile << inFileName.Data() << std::endl;
         myfile << "\\end{verbatim*}\n";
         myfile << "\\begin{center}\n";
-        myfile << "\\begin{tabular}{ |c|c|c|c|c|c|c|c|c|c|c|c| }\n";
+        myfile << "\\begin{tabular}{ |c|c|c|c|c|c|c|c|c|c|c|c|c|c|c| }\n";
         myfile << "\t\\hline\n";
-        myfile << "\t Centrality, \\% & $N_{ch}^{min}$ & $N_{ch}^{max}$ & $\\langle b \\rangle$, fm & $b_{min}$, fm & $b_{max}$, fm & $\\langle N_{part} \\rangle$ & $N_{part}^{min}$ & $N_{part}^{max}$ & $\\langle N_{coll} \\rangle$ & $N_{coll}^{min}$ & $N_{coll}^{max}$ \\\\\n";
+        myfile << "\t Centrality, \\% & $N_{ch}^{min}$ & $N_{ch}^{max}$ & $\\langle b \\rangle$, fm & RMS & $b_{min}$, fm & $b_{max}$, fm & $\\langle N_{part} \\rangle$ & RMS & $N_{part}^{min}$ & $N_{part}^{max}$ & $\\langle N_{coll} \\rangle$ & RMS & $N_{coll}^{min}$ & $N_{coll}^{max}$ \\\\\n";
         for (int i=0; i<NreasonableClasses; i++)
         {
             myfile << "\t\\hline\n";
-            myfile << Form("\t%.0f - %.0f & %i & %i & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f \\\\\n",
+            myfile << Form("\t%.0f - %.0f & %i & %i & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f \\\\\n",
                 vCent.at(i).first, vCent.at(i).second,
                 vBorders.at(i).first, vBorders.at(i).second,
-                vBavg.at(i), vBimp.at(i).first, vBimp.at(i).second,
-                vNpartavg.at(i), vNpart.at(i).second, vNpart.at(i).first,
-                vNcollavg.at(i), vNcoll.at(i).second, vNcoll.at(i).first);
+                vBavg.at(i), vBavgRMS.at(i), vBimp.at(i).first, vBimp.at(i).second,
+                vNpartavg.at(i), vNpartavgRMS.at(i), vNpart.at(i).second, vNpart.at(i).first,
+                vNcollavg.at(i), vNcollavgRMS.at(i), vNcoll.at(i).second, vNcoll.at(i).first);
         }
         myfile << "\t\\hline\n";
         myfile << "\\end{tabular}\n";
@@ -186,15 +197,15 @@ void printFinal(TString inFileName="", TString outFileName="")
         myfile.open(outFileName.Data());
 
         myfile << "Generated from a file: " << inFileName.Data() << "\n";
-        myfile << "Centrality class,Mult_min,Mult_max,Mean b,b_min,b_max,Mean Npart,Npart_min,Npart_max,Mean Ncoll,Ncoll_min,Ncoll_max,\n";
+        myfile << "Centrality class,Mult_min,Mult_max,Mean b,RMS,b_min,b_max,Mean Npart,RMS,Npart_min,Npart_max,Mean Ncoll,RMS,Ncoll_min,Ncoll_max,\n";
         for (int i=0; i<NreasonableClasses; i++)
         {
-            myfile << Form("%.0f - %.0f,%i,%i,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,\n",
+            myfile << Form("%.0f - %.0f,%i,%i,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,\n",
                 vCent.at(i).first, vCent.at(i).second,
                 vBorders.at(i).first, vBorders.at(i).second,
-                vBavg.at(i), vBimp.at(i).first, vBimp.at(i).second,
-                vNpartavg.at(i), vNpart.at(i).second, vNpart.at(i).first,
-                vNcollavg.at(i), vNcoll.at(i).second, vNcoll.at(i).first);
+                vBavg.at(i), vBavgRMS.at(i), vBimp.at(i).first, vBimp.at(i).second,
+                vNpartavg.at(i), vNpartavgRMS.at(i), vNpart.at(i).second, vNpart.at(i).first,
+                vNcollavg.at(i), vNcollavgRMS.at(i), vNcoll.at(i).second, vNcoll.at(i).first);
         }
         std::cout << "Output file " << outFileName.Data() << " is created." << std::endl;
         myfile.close();
@@ -237,6 +248,12 @@ void printFinal(TString inFileName="", TString outFileName="")
             if (i!=NreasonableClasses-1) myfile << vBavg.at(i) << ", ";
             if (i==NreasonableClasses-1) myfile << vBavg.at(i) << "};\n";
         }
+        myfile << "Float_t rmsB [" << NreasonableClasses << "] = { ";
+        for (int i=0; i<NreasonableClasses; i++)
+        {
+            if (i!=NreasonableClasses-1) myfile << vBavgRMS.at(i) << ", ";
+            if (i==NreasonableClasses-1) myfile << vBavgRMS.at(i) << "};\n";
+        }
         myfile << "Float_t minB [" << NreasonableClasses << "] = { ";
         for (int i=0; i<NreasonableClasses; i++)
         {
@@ -255,6 +272,12 @@ void printFinal(TString inFileName="", TString outFileName="")
             if (i!=NreasonableClasses-1) myfile << vNpartavg.at(i) << ", ";
             if (i==NreasonableClasses-1) myfile << vNpartavg.at(i) << "};\n";
         }
+        myfile << "Float_t rmsNpart [" << NreasonableClasses << "] = { ";
+        for (int i=0; i<NreasonableClasses; i++)
+        {
+            if (i!=NreasonableClasses-1) myfile << vNpartavgRMS.at(i) << ", ";
+            if (i==NreasonableClasses-1) myfile << vNpartavgRMS.at(i) << "};\n";
+        }
         myfile << "Float_t minNpart [" << NreasonableClasses << "] = { ";
         for (int i=0; i<NreasonableClasses; i++)
         {
@@ -272,6 +295,12 @@ void printFinal(TString inFileName="", TString outFileName="")
         {
             if (i!=NreasonableClasses-1) myfile << vNcollavg.at(i) << ", ";
             if (i==NreasonableClasses-1) myfile << vNcollavg.at(i) << "};\n";
+        }
+        myfile << "Float_t rmsNcoll [" << NreasonableClasses << "] = { ";
+        for (int i=0; i<NreasonableClasses; i++)
+        {
+            if (i!=NreasonableClasses-1) myfile << vNcollavgRMS.at(i) << ", ";
+            if (i==NreasonableClasses-1) myfile << vNcollavgRMS.at(i) << "};\n";
         }
         myfile << "Float_t minNcoll [" << NreasonableClasses << "] = { ";
         for (int i=0; i<NreasonableClasses; i++)
