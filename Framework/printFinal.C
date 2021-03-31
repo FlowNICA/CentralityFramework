@@ -314,8 +314,21 @@ void printFinal(TString inFileName="", TString outFileName="")
             if (i!=NreasonableClasses-1) myfile << vNcoll.at(i).second << ", ";
             if (i==NreasonableClasses-1) myfile << vNcoll.at(i).second << "};\n";
         }
-        
 
+        myfile << std::endl;
+        myfile << "Float_t GetCentMult(Int_t mult)\n";
+        myfile << "//Function returns centrality (in percent) for a given multiplicity\n";
+        myfile << "{\n";
+        myfile << "\tInt_t centBin = -1;\n";
+        myfile << "\tfor (Int_t i = 0; i < " << NreasonableClasses << "; i++)\n";
+        myfile << "\t{\n";
+        myfile << "\t\tif (mult >= minMult[i] && mult < maxMult[i])\n";
+        myfile << "\t\t\tcentBin = i;\n";
+        myfile << "\t}\n";
+        myfile << "\tif (centBin == -1) return -1.;\n";
+        myfile << "\treturn (Double_t)((maxCentPercent[centBin] - minCentPercent[centBin]) / 2. + minCentPercent[centBin]);\n";
+        myfile << "}";
+        
         std::cout << "Output file " << outFileName.Data() << " is created." << std::endl;
         myfile.close();
     }
