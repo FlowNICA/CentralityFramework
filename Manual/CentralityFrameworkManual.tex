@@ -1,0 +1,247 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{xcolor}
+\usepackage{listings}
+\lstset{basicstyle=\ttfamily,
+  showstringspaces=false,
+  commentstyle=\color{red},
+  keywordstyle=\color{blue}
+}
+\usepackage{hyperref}
+\urlstyle{same}
+\usepackage{geometry}
+ \geometry{
+ a4paper,
+ total={170mm,257mm},
+ left=20mm,
+ top=20mm,
+ }
+
+\title{Quick tutorial on MC-Glauber based centrality determination procedure in MPD (NICA)}
+\author{Petr Parfenov, Dim Idrisov, Vinh Ba Luong and Arkadiy Taranenko}
+\date{March 2021}
+
+\begin{document}
+
+\maketitle
+
+\section{Glauber Monte Carlo}
+
+\subsection{Installation}
+The latest version of Glauber Monte Carlo (MC-Glauber) package is available here:\\
+\url{https://tglaubermc.hepforge.org/downloads/}\\
+%
+To download it on the cluster one can use wget command:
+\begin{lstlisting}[language=bash,caption={}]
+wget https://tglaubermc.hepforge.org/downloads/?f=TGlauberMC-3.2.tar.gz
+\end{lstlisting}
+%
+To unpack and clean up the downloaded archive one can use the following command:
+\begin{lstlisting}[language=bash,caption={}]
+tar -xf *.tar.gz
+rm *.tar.gz
+\end{lstlisting}
+%
+The main ROOT script is \texttt{runlauber\_v3.2.C}.
+
+\subsection{Usage}
+
+Firstly, one need to set up ROOT environment:
+\begin{lstlisting}[language=bash,caption={}]
+source /opt/fairsoft/mpd/new/bin/thisroot.sh
+\end{lstlisting}
+%
+Use following commands to run Glauber Monte Carlo:
+\begin{lstlisting}[language=C++,caption={}]
+root -l
+.L runlauber_v3.2.C
+runAndSaveNtuple(Nev, sysA, sysB, signn)
+.q
+\end{lstlisting}
+%
+Here \texttt{Nev} denotes number of events, \texttt{sysA} and \texttt{sysB} -- colliding nuclei, and \texttt{signn} -- inelastic nucleon-nucleon cross section which defines energy of the colliding nuclei.
+
+In general, it is reasonable to generate (5-20)$\cdot$10$^{6}$ events to have enough statistics for the centrality determination procedure. The ratio between MC-Glauber and data statistics is 10/1, so for the centrality determination based on 5$\cdot$10$^{5}$ events from the data one must have at least 5$\cdot$10$^{6}$ MC-Glauber events.
+
+The first colliding systems on the MPD experiment is planned to be Bi+Bi and Au+Au.
+Those nuclei must be manually set up in the \texttt{runlauber\_v3.2.C} (under the line number 1172):
+\begin{lstlisting}[language=C++,caption={}]
+else if (TString(name) == "Au3")
+    {fN = 197; fR = 6.5541; fA = 0.523; fW = 0; fF = 1; fZ=79;}
+else if (TString(name) == "Bi")
+    {fN = 209; fR = 6.75; fA = 0.468; fW = 0; fF = 1; fZ=83;}
+\end{lstlisting}
+%
+Here \texttt{fN} denotes mass number, \texttt{fR} -- radius of the nucleus, \texttt{fA} -- skin thickness of the nucleus, \texttt{fW} -- deformation parameter of the nucleus, \texttt{fF} -- type of the nuclear density function (F = 1 means 3-parameter Fermi function) and \texttt{fZ} -- is the atomic number.
+
+The last parameter \texttt{signn} is set accordingly to the system energy ($\sqrt{s_{NN}}$).
+\begin{center}
+\begin{tabular}{ | c | c | c | c | c |}
+\hline
+ $\sqrt{s_{NN}}$, GeV & 4.5 & 7.7 & 9.5 & 11\\ 
+ \hline
+ $\sigma_{NN}^{inel}$, mb & 29.3 & 29.7 & 30.8 & 31.2  \\
+ \hline
+\end{tabular}
+\end{center}
+
+After adding those modification in the code, one can generate MC-Glauber data. For example, to generate 5$\cdot$10$^{6}$ Au+Au events at $\sqrt{s_{NN}}$ = 11~GeV, one can use the following command:
+\begin{lstlisting}[language=C++,caption={}]
+root -l
+.L runlauber_v3.2.C
+runAndSaveNtuple(5000000, "Au3", "Au3", 31.2)
+.q
+\end{lstlisting}
+%
+
+MC-Glauber will then write \texttt{gmc-Au3Au3-snn31.2--md0.4-nd-1.0-rc1-smax99.0.root} file with \texttt{TNtuple nt\_Au3\_Au3} in it. This file will be used in the centrality procedure.
+
+\section{Centrality Framework}
+
+\subsection{Installation}
+To download Centrality framework from the git one can use git clone command and install the project:
+\begin{lstlisting}[language=bash,caption={}]
+git clone https://github.com/FlowNICA/CentralityFramework.git
+cd CentralityFramework/Framework/centrality-master/
+mkdir build/
+cd build/
+cmake ..
+make
+\end{lstlisting}
+
+\subsection{Usage}
+\subsubsection{Preparing the data}
+To begin centrality determination procedure one needs multiplicity distribution from the data. Template reader \texttt{CentralityFramework/Readers/MpdDstReader.C} can be modified and used to fill histogram with multiplicity distribution from MpdDst file format. Generally, the framework was tested on multiplicity distributions with the following track selection criteria:
+\begin{itemize}
+    \item $p_{T} > 0.15$~GeV/c
+    \item $|\eta| < 0.5$
+    \item $N_{hits} > 16$ (for reconstructed data only)
+    \item DCA $<$ 0.5 cm.
+\end{itemize}
+
+\subsection{Submitting centrality determination jobs}
+\subsubsection{Configuring \texttt{config.txt.template}}
+Once the input files from MC-Glauber and data are ready, one can start the procedure.
+Template of the main script is stored in \texttt{CentralityFramework/scripts/template/} directory.
+First, change \texttt{config.txt.template}: put full path to the MC-Glauber file in the first line, name of the \texttt{TNtuple} in the second line (\texttt{nt\_Au3\_Au3} or \texttt{nt\_Bi\_Bi}) and full path to the file with multiplicity distribution from the previous step in the third line.
+If the name of the multiplicity histogram was modified it should be set in the line 4 of the \texttt{config.txt.template}.
+
+There are 4 parametrizations for fit function available. They set number of ancestors $N_{a}$ as a function of $N_{part}$ and $N_{coll}$:
+\begin{itemize}
+    \item Default : $N_{a} = fN_{part} + (1-f)N_{coll}$
+    \item PSD : $N_{a} = f - N_{part}$
+    \item Npart : $N_{a} = \left(N_{part}\right)^{f}$
+    \item Ncoll : $N_{a} = \left(N_{coll}\right)^{f}$
+    \item STAR : $N_{a} = \frac{(1-f)}{2}N_{part} + fN_{coll}$.
+\end{itemize}
+One can change parametrization in line 14 of \texttt{config.txt.template}.
+
+\subsubsection{Configuring \texttt{parameter.list}}
+Next step is to configure \texttt{parameter.list} file. It has 200 lines containing parameters configuration for each job in the following pattern:
+\begin{lstlisting}[language=bash,caption={}]
+f_min:f_max:k_min:k_max:Mult_min:Mult_max
+\end{lstlisting}
+%
+Those parameters then parsed and placed into copy of \texttt{config..txt.template} for each job. Parameters $f$, $k$ are set within ranges $0<f<1$, $0<k<100$ accordingly and do not require any changes. So the only change that is required are \texttt{Mult\_min:Mult\_max} which define multiplicity range within which the fit procedure is applied. To change those values one can use sed command:
+\begin{lstlisting}[language=bash,caption={}]
+sed -i "s/20:360/Mult_min:Mult_max/" parameter.list
+\end{lstlisting}
+%
+Here \texttt{Mult\_min} and \texttt{Mult\_max} are chosen based on the multiplicity distribution: \texttt{Mult\_min} generally is set to 10 or 20 and \texttt{Mult\_max} is set close to the values of maximum of the multiplicity distribution.
+
+\subsubsection{Configuring and running \texttt{start.sh}}
+First, one should change the paths to the temporary directory of their choosing: lines 4, 12, 13 of the \texttt{start.sh}.
+Then, in line 25, full path to the framework core: \\
+\texttt{CentralityFramework/Framework/centrality-master/}\\
+In line 32, one can set short and usable name for this centrality determination run. Generally, it contains collision system and beam energy under investigation with additional optional short information.
+After all necessary modifications are done, one can start the procedure:
+\begin{lstlisting}[language=bash,caption={}]
+qsub start.sh
+\end{lstlisting}
+%
+In most cases, it takes up to 2-3 hours for all jobs to finish.
+Results will be stored in the output directory \texttt{OUT} alongside \texttt{start.sh} script.
+
+\subsection{Final steps of the centrality determination analysis}
+After the fitting from the previous step is complete one can finish the analysis.
+
+\subsubsection{Finding best fit}
+First of all, one has to merge all fit results:
+\begin{lstlisting}[language=bash,caption={}]
+cd CentralityFramework/scripts/template/OUT/COMMIT/jobid/file/root/
+hadd -k -f -j 20 fit_merged.root fit/*.root
+\end{lstlisting}
+%
+Then use \texttt{CentralityFramework/Framework/Chi2.C} macro:
+\begin{lstlisting}[language=bash,caption={}]
+root -l -b -q Chi2.C'("........../fit_merged.root")'
+\end{lstlisting}
+%
+The macro may process for several minutes and result with a line: 
+\begin{lstlisting}[language=bash,caption={}]
+f = 0.34+/-0.122 mu = 0.221908+/-0.197214 
+k = 41+/-8.243 chi2 = 0.991703+/-0.0813411
+\end{lstlisting}
+%
+One has to find the corresponding file in \texttt{glauber\_qa/} directory.
+To do so, find the line in \texttt{parameter.list} which contains found $f$ and $k$ parameters - let's say line number $N$.
+The resulting best fit then is \texttt{glauber\_qa/glauber\_qa\_jobid\_N.root}.
+\texttt{Chi2.C} macro also will result with \texttt{Fit\_Errors\_RPC.root} file which contains quality of the fit information.
+
+\subsubsection{Dividing multiplicity into centrality cuts}
+This procedure is available once the file with optimal fit is found (see previous step).
+In file \texttt{HistoCut.C} one should modify the lines 2 and 3 with full path to the file \texttt{glauber\_qa/glauber\_qa\_jobid\_N.root} from the previous step.
+If the name of the multiplicity histogram was changed, it needs to be modified as well in line 5.
+Once the correct path to the file is set, simply run the macro:
+\begin{lstlisting}[language=bash,caption={}]
+root -l -b -q HistoCut.C'(10)'
+\end{lstlisting}
+%
+Number of the centrality classes is an argument of the macro. The argument is set \texttt{10} which produces 10 centrality classes within 0-100\% range (0-10\%, 10-20\%, ..., 90-100\%).
+Resulting file \texttt{HistoCutResult.root} contains multiplicity distributions for each centrality cuts for both fitted multiplicity function (\texttt{CentralityClass\_Fit}) and multiplicity distribution (\texttt{CentralityClass}) as well as the \texttt{TTree Borders}. This \texttt{TTree} contains the following information about each centrality class:
+\begin{itemize}
+    \item \texttt{Ncc} -- number of entry
+    \item \texttt{MinPercent} -- minimum value of centrality in the given centrality class
+    \item \texttt{MaxPercent} -- maximum value of centrality in the given centrality class
+    \item \texttt{MinBorder} -- lower cut on multiplicity for the given centrality class
+    \item \texttt{MaxBorder} -- upper cut on multiplicity for the given centrality class.
+\end{itemize}
+
+\subsubsection{Mapping parameters from MC-Glauber with centrality classes}
+Similarly to the previous step, in file \texttt{CentralityClasses.C} one has to modify lines 2 and 3 with full path to the \texttt{HistoCutResult.root} and \texttt{glauber\_qa/glauber\_qa\_jobid\_N.root} files correspondingly.
+After that, run the macro:
+\begin{lstlisting}[language=bash,caption={}]
+root -l -b -q CentralityClasses.C'(10)'
+\end{lstlisting}
+%
+The argument here is the same as for \texttt{HistoCut.C} macro: total number of centrality classes within 0-100\% centrality range.
+Resulting file \texttt{FINAL.root} contains impact parameter (\texttt{B\_VS\_CentralityClass}), number of participants (\texttt{Npart\_VS\_CentralityClass}), number of binary nucleon-nucleon collisions (\texttt{Ncoll\_VS\_CentralityClass}) distributions for each centrality class and centrality dependence of their mean values (\texttt{B\_average\_VS\_Centrality}, \texttt{Npart\_average\_VS\_Centrality}, \texttt{Ncoll\_average\_VS\_Centrality}).
+Additionally, \texttt{FINAL.root} contains \texttt{TTree Result} which is a direct copy of \texttt{TTree Borders} from the previous step.
+
+\subsection{Using centrality classes provided from the framework in the analysis}
+As was mentioned above, files \texttt{HistoCutResult.root} and \texttt{FINAL.root} have all needed information.
+Use macro \texttt{printFinal.C} to display this information in a simple and readable way:
+\begin{lstlisting}[language=bash,caption={}]
+root -l -b -q printFinal.C'("path-to-FINAL.root")'
+\end{lstlisting}
+%
+This will print out all needed information for each centrality class.
+This macro also can save output information in several formats: latex, csv tables and C++ code.\\
+Example of \texttt{printFinal.C} saving in latex table:
+\begin{lstlisting}[language=bash,caption={}]
+root -l -b -q printFinal.C'("path-to-FINAL.root","./example.tex")'
+\end{lstlisting}
+%
+Example of \texttt{printFinal.C} saving in csv table (compatible with LibreOffice and MS Excel):
+\begin{lstlisting}[language=bash,caption={}]
+root -l -b -q printFinal.C'("path-to-FINAL.root","./example.csv")'
+\end{lstlisting}
+%
+Example of \texttt{printFinal.C} saving in C++ code:
+\begin{lstlisting}[language=bash,caption={}]
+root -l -b -q printFinal.C'("path-to-FINAL.root","./example.C")'
+\end{lstlisting}
+%
+After \texttt{printFinal.C} generates output C++ code, one can use \texttt{Float\_t GetCentMult(Int\_t)} as a function which returns centrality percent (for example, for 0-10\% centrality class, the function will return 15.) based on input multiplicity value.
+
+\end{document}

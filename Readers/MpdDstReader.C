@@ -32,7 +32,7 @@
 #include <MpdKalmanTrack.h>
 #include <MpdVertex.h>
 
-void MpdDstReader(TChain *inChain, TString outFileName, Bool_t primaryOnly = false, Bool_t eventShuffle = false)
+void MpdDstReader(TChain *inChain, TString outFileName)
 {
   TStopwatch timer;
   timer.Start();
@@ -42,7 +42,7 @@ void MpdDstReader(TChain *inChain, TString outFileName, Bool_t primaryOnly = fal
   const Double_t cut_pt = 0.15; // default: 0.15 GeV/c
   const Double_t cut_eta = 0.5; // default: 0.5
   const Int_t cut_nhits = 16;   // default: 16
-  const Double_t dca_cut = 0.2; // dca cut
+  const Double_t dca_cut = 0.5; // default: 0.5 cm
 
   TH1F *hRefMult = new TH1F("hRefMultSTAR","hRefMultSTAR",2500,0,2500);
   TH2F *hBvsRefMult = new TH2F("hBvsRefMult","hBvsRefMult",2500,0,2500,200,0.,20.);
@@ -50,46 +50,25 @@ void MpdDstReader(TChain *inChain, TString outFileName, Bool_t primaryOnly = fal
   FairMCEventHeader *MCHeader;
   TClonesArray *MCTracks;
   MpdEvent *MPDEvent;
-  //TClonesArray *FHCalHits;
   TClonesArray *MpdGlobalTracks;
-  //MpdZdcDigi *FHCalHit;
-  //TClonesArray *mpdKalmanTracks;
-  //TClonesArray *vertexes;
 
   MCHeader = nullptr;
   MCTracks = nullptr;
   MPDEvent = nullptr;
-  //FHCalHits = nullptr;
-  //mpdKalmanTracks = nullptr;
-  //vertexes = nullptr;
 
   inChain->SetBranchAddress("MCEventHeader.", &MCHeader);
   inChain->SetBranchAddress("MCTrack", &MCTracks);
   inChain->SetBranchAddress("MPDEvent.", &MPDEvent);
-  //inChain->SetBranchAddress("ZdcDigi", &FHCalHits);
-  //inChain->SetBranchAddress("TpcKalmanTrack", &mpdKalmanTracks);
-  //inChain->SetBranchAddress("Vertex", &vertexes);
   
   std::vector<Long64_t> vEvents;
   std::random_device rd;
   std::mt19937 g(rd());
 
-  Long64_t Nentries = 5e5; // (Long64_t) inChain->GetEntries();
-  // Shuffle events - for PHSD only!
-  /*if (eventShuffle)
-  {
-    std::cout << "Applying event shuffle..." << std::endl;
-    for (Long64_t jentry=0; jentry<Nentries;jentry++)
-    {
-      vEvents.push_back(jentry);
-    }
-    std::shuffle(vEvents.begin(), vEvents.end(), g);
-  }*/
+  Long64_t Nentries = 5e5; // or (Long64_t) inChain->GetEntries();
 
   // Starting event loop
   Long64_t Nevents;
-  if (!eventShuffle) Nevents = (Nentries < 5e5) ? Nentries : 5e5;
-  if (eventShuffle) Nevents = Nentries;
+  Nevents = (Nentries < 5e5) ? Nentries : 5e5;
   Int_t refMult, nhits;
   Double_t pt, eta;
   Long64_t iEvent;
@@ -97,18 +76,11 @@ void MpdDstReader(TChain *inChain, TString outFileName, Bool_t primaryOnly = fal
   Double_t prob_skip;
   for (Long64_t jentry=0; jentry<Nevents;jentry++)
   {
-    if (!eventShuffle) iEvent = jentry;
-    //if (eventShuffle) iEvent  = vEvents.at(jentry);
-    if (eventShuffle)
-    {
-      prob_skip = rnd->Rndm();
-      if ( prob_skip > (1. - 5e5/Nentries) ) continue;
-      iEvent = jentry;
-    }
+    iEvent = jentry;
 
     inChain->GetEntry(iEvent);
     if (jentry%1000 == 0) std::cout << "Event ["
-      << jentry << "/" << Nevents << "]: reading event " << iEvent << std::endl;
+      << jentry << "/" << Nevents << "]" << std::endl;
     refMult = 0;
     MpdGlobalTracks = (TClonesArray*) MPDEvent->GetGlobalTracks();
     Int_t ntracks = MpdGlobalTracks->GetEntriesFast();
@@ -130,9 +102,8 @@ void MpdDstReader(TChain *inChain, TString outFileName, Bool_t primaryOnly = fal
       if (TMath::Abs(eta) > cut_eta) continue;
       if (nhits < cut_nhits) continue;
 
-      // Skip secondary particles if the flag primaryOnly is set
-      //if (primaryOnly && mctrack->GetMotherId() != -1) continue;
-      if (primaryOnly && TMath::Sqrt(TMath::Power(mpdtrack->GetDCAX(),2) + TMath::Power(mpdtrack->GetDCAY(),2) + TMath::Power(mpdtrack->GetDCAZ(),2)) > dca_cut) continue;
+      // Primary track selection
+      if (TMath::Sqrt(TMath::Power(mpdtrack->GetDCAX(),2) + TMath::Power(mpdtrack->GetDCAY(),2) + TMath::Power(mpdtrack->GetDCAZ(),2)) > dca_cut) continue;
 
       refMult++;
     }
