@@ -41,12 +41,30 @@ void printFinal(TString inFileName="", TString outFileName="")
     Float_t MaxPercent;
     Int_t MinBorder;
     Int_t MaxBorder;
+    Double_t Bavg;
+    Double_t Bwidth;
+    Double_t NpartAvg;
+    Double_t NpartWidth;
+    Double_t NcollAvg;
+    Double_t NcollWidth;
 
     Result->SetBranchAddress("Ncc", &Ncc);
     Result->SetBranchAddress("MinPercent", &MinPercent);
     Result->SetBranchAddress("MaxPercent", &MaxPercent);
     Result->SetBranchAddress("MinBorder", &MinBorder);
     Result->SetBranchAddress("MaxBorder", &MaxBorder);
+    if (!hBavg){
+      Result->SetBranchAddress("BAverage", &Bavg);
+      Result->SetBranchAddress("BWidth", &Bwidth);
+    }
+    if (!hNpartavg){
+      Result->SetBranchAddress("NpartAverage", &NpartAvg);
+      Result->SetBranchAddress("NpartWidth", &NpartWidth);
+    }
+    if (!hNcollavg){
+      Result->SetBranchAddress("NcollAverage", &NcollAvg);
+      Result->SetBranchAddress("NcollWidth", &NcollWidth);
+    }
 
     std::vector<std::pair<Float_t, Float_t>> vCent;
     std::vector<std::pair<Int_t, Int_t>> vBorders;
@@ -60,7 +78,7 @@ void printFinal(TString inFileName="", TString outFileName="")
     std::vector<Float_t> vNcollavg;
     std::vector<Float_t> vNcollavgRMS;
 
-    Int_t Nclasses = Result->GetEntries();
+    Int_t Nclasses = Result->GetEntriesFast();
 
     // Read TTree
     for (int i=0; i<Nclasses; i++)
@@ -68,30 +86,72 @@ void printFinal(TString inFileName="", TString outFileName="")
         Result->GetEntry(i);
         vCent.push_back({MinPercent, MaxPercent});
         vBorders.push_back({MinBorder, MaxBorder});
+        if (!hBavg){
+          vBavg.push_back(Bavg);
+          vBavgRMS.push_back(Bwidth);
+        }
+        if (!hNpartavg){
+          vNpartavg.push_back(NpartAvg);
+          vNpartavgRMS.push_back(NpartWidth);
+        }
+        if (!hNcollavg){
+          vNcollavg.push_back(NcollAvg);
+          vNcollavgRMS.push_back(NcollWidth);
+        }
+    }
+    
+    // Read averaged values
+    if (hBavg){
+        for (int i=0; i<hBavg->GetNbinsX(); i++)
+        {
+            if (hBavg->GetBinContent(i+1) != 0){
+                vBavg.push_back(hBavg->GetBinContent(i+1));
+                vBavgRMS.push_back(hBavg->GetBinError(i+1));
+            }
+        }
+    }
+    if (hNpartavg){
+        for (int i=0; i<hNpartavg->GetNbinsX(); i++)
+        {
+            if (hNpartavg->GetBinContent(i+1) != 0)
+            {
+                vNpartavg.push_back(hNpartavg->GetBinContent(i+1));
+                vNpartavgRMS.push_back(hNpartavg->GetBinError(i+1));
+            }
+        }
+    }
+    if (hNcollavg){
+        for (int i=0; i<hNcollavg->GetNbinsX(); i++)
+        {
+            if (hNcollavg->GetBinContent(i+1) != 0)
+            {
+                vNcollavg.push_back(hNcollavg->GetBinContent(i+1));
+                vNcollavgRMS.push_back(hNcollavg->GetBinError(i+1));
+            }
+        }
     }
 
-    // Read averaged values
-    for (int i=0; i<hBavg->GetNbinsX(); i++)
-    {
-        if (hBavg->GetBinContent(i+1) != 0){
-            vBavg.push_back(hBavg->GetBinContent(i+1));
-            vBavgRMS.push_back(hBavg->GetBinError(i+1));
+    if (!hBavg){
+        hBavg = new TH1D("B_average_VS_Centrality", "B_average_VS_Centrality", Nclasses, vCent.at(0).first, vCent.at(vCent.size()-1).second);
+        for (int i=0; i<Nclasses; i++){
+            hBavg->SetBinContent(i+1, vBavg.at(i));
+            hBavg->SetBinError(i+1, vBavgRMS.at(i));
         }
     }
-    for (int i=0; i<hNpartavg->GetNbinsX(); i++)
-    {
-        if (hNpartavg->GetBinContent(i+1) != 0)
-        {
-            vNpartavg.push_back(hNpartavg->GetBinContent(i+1));
-            vNpartavgRMS.push_back(hNpartavg->GetBinError(i+1));
+
+    if (!hNpartavg){
+        hNpartavg = new TH1D("Npart_average_VS_Centrality", "Npart_average_VS_Centrality", Nclasses, vCent.at(0).first, vCent.at(vCent.size()-1).second);
+        for (int i=0; i<Nclasses; i++){
+            hNpartavg->SetBinContent(i+1, vNpartavg.at(i));
+            hNpartavg->SetBinError(i+1, vNpartavgRMS.at(i));
         }
     }
-    for (int i=0; i<hNcollavg->GetNbinsX(); i++)
-    {
-        if (hNcollavg->GetBinContent(i+1) != 0)
-        {
-            vNcollavg.push_back(hNcollavg->GetBinContent(i+1));
-            vNcollavgRMS.push_back(hNcollavg->GetBinError(i+1));
+
+    if (!hNcollavg){
+        hNcollavg = new TH1D("Ncoll_average_VS_Centrality", "Ncoll_average_VS_Centrality", Nclasses, vCent.at(0).first, vCent.at(vCent.size()-1).second);
+        for (int i=0; i<Nclasses; i++){
+            hNcollavg->SetBinContent(i+1, vNcollavg.at(i));
+            hNcollavg->SetBinError(i+1, vNcollavgRMS.at(i));
         }
     }
 
@@ -170,16 +230,23 @@ void printFinal(TString inFileName="", TString outFileName="")
         myfile << "\\begin{center}\n";
         myfile << "\\begin{tabular}{ |c|c|c|c|c|c|c|c|c|c|c|c|c|c|c| }\n";
         myfile << "\t\\hline\n";
-        myfile << "\t Centrality, \\% & $N_{ch}^{min}$ & $N_{ch}^{max}$ & $\\langle b \\rangle$, fm & RMS & $b_{min}$, fm & $b_{max}$, fm & $\\langle N_{part} \\rangle$ & RMS & $N_{part}^{min}$ & $N_{part}^{max}$ & $\\langle N_{coll} \\rangle$ & RMS & $N_{coll}^{min}$ & $N_{coll}^{max}$ \\\\\n";
+        // myfile << "\t Centrality, \\% & $N_{ch}^{min}$ & $N_{ch}^{max}$ & $\\langle b \\rangle$, fm & RMS & $b_{min}$, fm & $b_{max}$, fm & $\\langle N_{part} \\rangle$ & RMS & $N_{part}^{min}$ & $N_{part}^{max}$ & $\\langle N_{coll} \\rangle$ & RMS & $N_{coll}^{min}$ & $N_{coll}^{max}$ \\\\\n";
+        myfile << "\t Centrality, \\% & $N_{ch}^{min}$ & $N_{ch}^{max}$ & $\\langle b \\rangle$, fm & RMS & $\\langle N_{part} \\rangle$ & RMS & $\\langle N_{coll} \\rangle$ & RMS \\\\\n";
         for (int i=0; i<NreasonableClasses; i++)
         {
             myfile << "\t\\hline\n";
-            myfile << Form("\t%.0f - %.0f & %i & %i & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f \\\\\n",
+            // myfile << Form("\t%.0f - %.0f & %i & %i & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f \\\\\n",
+            //     vCent.at(i).first, vCent.at(i).second,
+            //     vBorders.at(i).first, vBorders.at(i).second,
+            //     vBavg.at(i), vBavgRMS.at(i), vBimp.at(i).first, vBimp.at(i).second,
+            //     vNpartavg.at(i), vNpartavgRMS.at(i), vNpart.at(i).second, vNpart.at(i).first,
+            //     vNcollavg.at(i), vNcollavgRMS.at(i), vNcoll.at(i).second, vNcoll.at(i).first);
+            myfile << Form("\t%.0f - %.0f & %i & %i & %.2f & %.2f & %.2f & %.2f & %.2f & %.2f \\\\\n",
                 vCent.at(i).first, vCent.at(i).second,
                 vBorders.at(i).first, vBorders.at(i).second,
-                vBavg.at(i), vBavgRMS.at(i), vBimp.at(i).first, vBimp.at(i).second,
-                vNpartavg.at(i), vNpartavgRMS.at(i), vNpart.at(i).second, vNpart.at(i).first,
-                vNcollavg.at(i), vNcollavgRMS.at(i), vNcoll.at(i).second, vNcoll.at(i).first);
+                vBavg.at(i), vBavgRMS.at(i), //vBimp.at(i).first, vBimp.at(i).second,
+                vNpartavg.at(i), vNpartavgRMS.at(i), //vNpart.at(i).second, vNpart.at(i).first,
+                vNcollavg.at(i), vNcollavgRMS.at(i)); //vNcoll.at(i).second, vNcoll.at(i).first);
         }
         myfile << "\t\\hline\n";
         myfile << "\\end{tabular}\n";
@@ -332,4 +399,5 @@ void printFinal(TString inFileName="", TString outFileName="")
         std::cout << "Output file " << outFileName.Data() << " is created." << std::endl;
         myfile.close();
     }
+    
 }
