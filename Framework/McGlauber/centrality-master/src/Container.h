@@ -9,6 +9,7 @@
 #define CENTRALITY_CONTAINER_H
 
 #include <map>
+using uint = unsigned int;
 
 namespace Centrality {
 
