@@ -34,11 +34,15 @@ namespace Glauber
         c1_4->SetLogy(1);
         
         /*const*/ TH1F hGlaub = fit.GetGlauberFitHisto();
+        /*const*/ TH1F hGlPlp = fit.GetGlauberPlpHisto();
+        /*const*/ TH1F hGlSng = fit.GetGlauberSngHisto();
         /*const*/ TH1F hData = fit.GetDataHisto();
         /*const*/ TH1F hNBD = fit.GetNBDHisto();
         /*const*/ TH1F hNcoll = fit.GetNcollHisto();
         /*const*/ TH1F hNpart = fit.GetNpartHisto();
         /*const*/ TH1F hBestFit = fit.GetBestFitHisto();
+        /*const*/ TH1F hBestPlp = fit.GetBestPlpHisto();
+        /*const*/ TH1F hBestSng = fit.GetBestSngHisto();
 
 		  TH2F hBestB_VS_Multiplicity=fit.GetBestB_VS_Multiplicity();
 		  TH2F hBestNpart_VS_Multiplicity=fit.GetBestNpart_VS_Multiplicity();
@@ -79,12 +83,20 @@ namespace Glauber
             if (isGlauber){
                 hBestFit.SetLineColor (kRed);
                 hBestFit.Draw("same");
+                hBestPlp.SetLineColor (kBlack);
+                hBestPlp.Draw("same");
+                hBestSng.SetLineColor (kGreen+1);
+                hBestSng.Draw("same");
                 
                 std::unique_ptr <TLegend>  legData { new TLegend(0.6,0.75,0.75,0.83) };
                 legData->AddEntry(&hBestFit ,"Fit", "l");    
+                legData->AddEntry(&hBestPlp ,"Pile-up", "l");    
+                legData->AddEntry(&hBestSng ,"Single", "l");    
                 legData->AddEntry(&hData ,"Data", "l");    
                 legData->Draw("same");   
                 hBestFit.Write();
+                hBestPlp.Write();
+                hBestSng.Write();
                 hBestB_VS_Multiplicity.Write();
                 hBestNpart_VS_Multiplicity.Write();
                 hBestNcoll_VS_Multiplicity.Write();
@@ -111,17 +123,20 @@ namespace Glauber
         if (isGlauber){
             c1->cd(4);
             hBestFit.Draw();
+            hBestPlp.Draw("same");
+            hBestSng.Draw("same");
         }
 
 	TTree *BestResult=new TTree("BestResult", "BestResult");
-	Float_t mu, f, k, chi2_error;
+	Float_t mu, f, k, p, chi2_error;
 	BestResult -> Branch("mu", &mu);
     	BestResult -> Branch("f", &f);
     	BestResult -> Branch("k", &k);
+    	BestResult -> Branch("p", &p);
     	BestResult -> Branch("chi2", &chi2);
     	BestResult -> Branch("chi2_error", &chi2_error);
 
-    	mu=par[1]; f=par[0]; k=par[2]; chi2_error=par[3];
+    	mu=par[1]; f=par[0]; k=par[2]; chi2_error=par[3]; p=par[4];
 
     	BestResult -> Fill();
 	BestResult -> Write();

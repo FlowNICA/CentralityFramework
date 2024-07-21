@@ -9,6 +9,9 @@ f_step: 0.1
 k_min: 11
 k_max: 11
 k_step: 1
+p_min: 0.05
+p_max: 0.05
+p_step: 0.001
 Mult_min: 50
-Mult_max: 250
+Mult_max: 300
 Mode: Default
