@@ -31,12 +31,12 @@ namespace Glauber
         virtual ~Fitter(){};
         
         void Init(int nEntries, TString fmode);
-        void SetGlauberFitHisto (Float_t f, Float_t mu, Float_t k, Int_t n = 10000, Bool_t Norm2Data = true);
+        void SetGlauberFitHisto (Float_t f, Float_t mu, Float_t k, Float_t p, Int_t n = 10000, Bool_t Norm2Data = true);
         void NormalizeGlauberFit ();
         void DrawHistos (Bool_t isSim = true, Bool_t isData = true, Bool_t isGlauber = false, Bool_t isNBD = false);
         
-        float FitGlauber (float *par, Float_t f0, Float_t f1, Int_t k0, Int_t k1, Int_t nEvents);
-        void FindMuGoldenSection (Float_t *mu, Float_t *chi2, float*chi2_error, Float_t mu_min, Float_t mu_max, Float_t f, Float_t k, Int_t nEvents = 10000, Int_t nIter = 5, int n=0);
+        float FitGlauber (float *par, Float_t f0, Float_t f1, Int_t k0, Int_t k1, Float_t p0, Float_t p1, Int_t nEvents);
+        void FindMuGoldenSection (Float_t *mu, Float_t *chi2, float*chi2_error, Float_t mu_min, Float_t mu_max, Float_t f, Float_t k, Float_t p, Int_t nEvents = 10000, Int_t nIter = 5, int n=0);
         
         Float_t GetChi2 (void) const;
 	Float_t GetChi2Error (void) const;
@@ -48,7 +48,7 @@ namespace Glauber
         float Nancestors(float f, float npart, float ncoll) const;
         float NancestorsMax(float f) const;
         
-        std::unique_ptr<TH1F> GetModelHisto (const Float_t range[2], TString name, const Float_t par[4], Int_t nEvents);
+        std::unique_ptr<TH1F> GetModelHisto (const Float_t range[2], TString name, const Float_t par[5], Int_t nEvents);
         
 //         
 //         Setters
@@ -64,17 +64,22 @@ namespace Glauber
   void SetNiter(Int_t a) { fNiter = a; }
   void SetFstepSize(Float_t a) { fFstep = a; }
   void SetKstepSize(Int_t a) { fKstep = a; }
+  void SetPstepSize(Float_t a) { fPstep = a; }
  
 //         
 //         Getters
 //         
         TH1F GetGlauberFitHisto () const { return fGlauberFitHisto; }
+        TH1F GetGlauberPlpHisto () const { return fGlauberPlpHisto; }
+        TH1F GetGlauberSngHisto () const { return fGlauberSngHisto; }
         TH1F GetDataHisto ()       const { return fDataHisto;  }
         TH1F GetNBDHisto ()        const { return fNbdHisto;   }
 	    TH1F GetBHisto ()          const { return fBHisto; }
         TH1F GetNpartHisto ()      const { return fNpartHisto; }
         TH1F GetNcollHisto ()      const { return fNcollHisto;  }
         TH1F GetBestFitHisto ()     const { return fBestFitHisto;  }
+        TH1F GetBestPlpHisto ()     const { return fBestPlpHisto;  }
+        TH1F GetBestSngHisto ()     const { return fBestSngHisto;  }
         TH1F GetEcc1Histo ()      const { return fEcc1Histo; }
         TH1F GetPsi1Histo ()      const { return fPsi1Histo; }
         TH1F GetEcc2Histo ()      const { return fEcc2Histo; }
@@ -135,10 +140,15 @@ namespace Glauber
         TH1F fDataHisto; 
         TH1F fNbdHisto;
         TH1F fGlauberFitHisto; 
+        TH1F fGlauberPlpHisto; 
+        TH1F fGlauberSngHisto; 
         TH1F fBestFitHisto;
+        TH1F fBestPlpHisto;
+        TH1F fBestSngHisto;
     Int_t fNiter;
     Float_t fFstep;
     Int_t fKstep;
+    Float_t fPstep;
 
 	TH2F fB_VS_Multiplicity;
 	TH2F fNpart_VS_Multiplicity;

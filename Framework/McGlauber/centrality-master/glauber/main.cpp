@@ -25,6 +25,7 @@ int main(int argc, char *argv[])
     }
 
 		Float_t f0, f1, f_step;
+		Float_t p0, p1, p_step;
     Int_t   k0, k1, n_iter, k_step;
     Int_t   min_bin, max_bin;
     std::string input_glauber_file;
@@ -67,6 +68,12 @@ int main(int argc, char *argv[])
     str_name.push_back(str);
 		configfile >> str >> k_step;
     str_name.push_back(str);
+    configfile >> str >> p0;
+    str_name.push_back(str);
+		configfile >> str >> p1;
+    str_name.push_back(str);
+		configfile >> str >> p_step;
+    str_name.push_back(str);
 		configfile >> str >> min_bin;
     str_name.push_back(str);
 		configfile >> str >> max_bin;
@@ -90,6 +97,9 @@ int main(int argc, char *argv[])
     std::cout << str_name.at(i_param++) << " " << k0 << std::endl;
     std::cout << str_name.at(i_param++) << " " << k1 << std::endl;
     std::cout << str_name.at(i_param++) << " " << k_step << std::endl;
+    std::cout << str_name.at(i_param++) << " " << p0 << std::endl;
+    std::cout << str_name.at(i_param++) << " " << p1 << std::endl;
+    std::cout << str_name.at(i_param++) << " " << p_step << std::endl;
     std::cout << str_name.at(i_param++) << " " << min_bin << std::endl;
     std::cout << str_name.at(i_param++) << " " << max_bin << std::endl;
     std::cout << str_name.at(i_param++) << " " << input_glauber_mode << std::endl;
@@ -157,14 +167,15 @@ int main(int argc, char *argv[])
     fitter.SetNiter(n_iter);
     fitter.SetFstepSize(f_step);
     fitter.SetKstepSize(k_step);
+    fitter.SetPstepSize(p_step);
 
-    float par[4];
-//    const float chi2 = fitter.FitGlauber(par, f0, f1, k0, k1, nevents);
+    float par[5];
+//    const float chi2 = fitter.FitGlauber(par, f0, f1, k0, k1, p0, p1, nevents);
 	
     float chi2=1e10;
-    chi2 = fitter.FitGlauber(par, f0, f1, k0, k1, nevents);
+    chi2 = fitter.FitGlauber(par, f0, f1, k0, k1, p0, p1, nevents);
 
-    std::cout << "f = " << par[0] << "    mu = " << par[1] << "    k = " << par[2] << "    chi2 = " << chi2 << "    chi2_error = " << par[3] << std::endl; 
+    std::cout << "f = " << par[0] << "    mu = " << par[1] << "    k = " << par[2] << "    p = " << par[4] << "    chi2 = " << chi2 << "    chi2_error = " << par[3] << std::endl; 
     
 //    Glauber::DrawHistos(fitter, true, true, true, true);
 
