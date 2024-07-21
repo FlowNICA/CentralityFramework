@@ -45,6 +45,7 @@ namespace Glauber
         void SetNBDhist(Float_t mu, Float_t k);
 
         float Nancestors(float f) const;
+        float Nancestors(float f, float npart, float ncoll) const;
         float NancestorsMax(float f) const;
         
         std::unique_ptr<TH1F> GetModelHisto (const Float_t range[2], TString name, const Float_t par[4], Int_t nEvents);
@@ -185,6 +186,20 @@ namespace Glauber
         Float_t fPsi4{-1.};
         Float_t fEcc5{-1.};
         Float_t fPsi5{-1.};
+
+        std::vector<float> fvB{};
+        std::vector<float> fvNpart{};
+        std::vector<float> fvNcoll{};
+        std::vector<float> fvEcc1{};
+        std::vector<float> fvPsi1{};
+        std::vector<float> fvEcc2{};
+        std::vector<float> fvPsi2{};
+        std::vector<float> fvEcc3{};
+        std::vector<float> fvPsi3{};
+        std::vector<float> fvEcc4{};
+        std::vector<float> fvPsi4{};
+        std::vector<float> fvEcc5{};
+        std::vector<float> fvPsi5{};
 
         Float_t fMaxValue{-1.};
         

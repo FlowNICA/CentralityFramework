@@ -45,6 +45,20 @@ void Glauber::Fitter::Init(int nEntries, TString fmode)
         exit(EXIT_FAILURE);
     }
 
+    fvB.clear();
+    fvNpart.clear();
+    fvNcoll.clear();
+    fvEcc1.clear();
+    fvPsi1.clear();
+    fvEcc2.clear();
+    fvPsi2.clear();
+    fvEcc3.clear();
+    fvPsi3.clear();
+    fvEcc4.clear();
+    fvPsi4.clear();
+    fvEcc5.clear();
+    fvPsi5.clear();
+
     const int BMax  = int (fSimTree->GetMaximum("B") );
     const int NpartMax  = int (fSimTree->GetMaximum("Npart") );
     const int NcollMax  = int (fSimTree->GetMaximum("Ncoll") );
@@ -100,6 +114,20 @@ void Glauber::Fitter::Init(int nEntries, TString fmode)
         fPsi4Histo.Fill(fPsi4);
         fEcc5Histo.Fill(fEcc5);
         fPsi5Histo.Fill(fPsi5);
+
+        fvB.push_back(fB);
+        fvNpart.push_back(fNpart);
+        fvNcoll.push_back(fNcoll);
+        fvEcc1.push_back(fEcc1);
+        fvPsi1.push_back(fPsi1);
+        fvEcc2.push_back(fEcc2);
+        fvPsi2.push_back(fPsi2);
+        fvEcc3.push_back(fEcc3);
+        fvPsi3.push_back(fPsi3);
+        fvEcc4.push_back(fEcc4);
+        fvPsi4.push_back(fPsi4);
+        fvEcc5.push_back(fEcc5);
+        fvPsi5.push_back(fPsi5);
     	}
     std::cout << fSimTree->GetEntries() << std::endl;
 
@@ -127,6 +155,17 @@ float Glauber::Fitter::Nancestors(float f) const
     else if  (fMode == "Npart")      return TMath::Power(fNpart, f); 
     else if  (fMode == "Ncoll")      return TMath::Power(fNcoll, f);
     else if  (fMode == "STAR")       return (1-f)*fNpart/2. + f*fNcoll;
+    
+    return -1.;
+}
+
+float Glauber::Fitter::Nancestors(float f, float npart, float ncoll) const
+{
+    if       (fMode == "Default")    return f*npart + (1-f)*ncoll;
+    else if  (fMode == "PSD")        return f-npart;
+    else if  (fMode == "Npart")      return TMath::Power(npart, f); 
+    else if  (fMode == "Ncoll")      return TMath::Power(ncoll, f);
+    else if  (fMode == "STAR")       return (1-f)*npart/2. + f*ncoll;
     
     return -1.;
 }
@@ -187,25 +226,25 @@ void Glauber::Fitter::SetGlauberFitHisto (float f, float mu, float k, int n, Boo
     std::unique_ptr<TH1F> htemp {(TH1F*)fNbdHisto.Clone("htemp")}; // WTF??? Not working without pointer
     for (int i=0; i<n; i++)
     {
-        fSimTree->GetEntry(i);
-        const int Na = int(Nancestors(f));
+        // fSimTree->GetEntry(i);
+        const int Na = int(Nancestors(f, fvNpart.at(i), fvNcoll.at(i)));
                 
         float nHits {0.};
         for (int j=0; j<Na; j++) nHits += int(htemp->GetRandom());
         fGlauberFitHisto.Fill(nHits);
-        fB_VS_Multiplicity.Fill(nHits,fB);
-        fNpart_VS_Multiplicity.Fill(nHits,fNpart);
-        fNcoll_VS_Multiplicity.Fill(nHits,fNcoll);
-        fEcc1_VS_Multiplicity.Fill(nHits,fEcc1);
-        fPsi1_VS_Multiplicity.Fill(nHits,fPsi1);
-        fEcc2_VS_Multiplicity.Fill(nHits,fEcc2);
-        fPsi2_VS_Multiplicity.Fill(nHits,fPsi2);
-        fEcc3_VS_Multiplicity.Fill(nHits,fEcc3);
-        fPsi3_VS_Multiplicity.Fill(nHits,fPsi3);
-        fEcc4_VS_Multiplicity.Fill(nHits,fEcc4);
-        fPsi4_VS_Multiplicity.Fill(nHits,fPsi4);
-        fEcc5_VS_Multiplicity.Fill(nHits,fEcc5);
-        fPsi5_VS_Multiplicity.Fill(nHits,fPsi5);
+        fB_VS_Multiplicity.Fill(nHits,fvB.at(i));
+        fNpart_VS_Multiplicity.Fill(nHits,(float)fvNpart.at(i));
+        fNcoll_VS_Multiplicity.Fill(nHits,(float)fvNcoll.at(i));
+        fEcc1_VS_Multiplicity.Fill(nHits,fvEcc1.at(i));
+        fPsi1_VS_Multiplicity.Fill(nHits,fvPsi1.at(i));
+        fEcc2_VS_Multiplicity.Fill(nHits,fvEcc2.at(i));
+        fPsi2_VS_Multiplicity.Fill(nHits,fvPsi2.at(i));
+        fEcc3_VS_Multiplicity.Fill(nHits,fvEcc3.at(i));
+        fPsi3_VS_Multiplicity.Fill(nHits,fvPsi3.at(i));
+        fEcc4_VS_Multiplicity.Fill(nHits,fvEcc4.at(i));
+        fPsi4_VS_Multiplicity.Fill(nHits,fvPsi4.at(i));
+        fEcc5_VS_Multiplicity.Fill(nHits,fvEcc5.at(i));
+        fPsi5_VS_Multiplicity.Fill(nHits,fvPsi5.at(i));
     }
     if (Norm2Data)
         NormalizeGlauberFit();
@@ -339,7 +378,7 @@ float Glauber::Fitter::FitGlauber (float *par, Float_t f0, Float_t f1, Int_t k0,
 	    {
 		mu = fMaxValue / NancestorsMax(f) ;
 		k = j;
-		const float mu_min = 0.7*mu;
+		const float mu_min = 0.0*mu;
 		const float mu_max = 1.0*mu;
 
     if (fNiter == 0) fNiter = 2;
@@ -523,8 +562,8 @@ std::unique_ptr<TH1F> Glauber::Fitter::GetModelHisto (const float range[2], TStr
 
     for (int i=0; i<nEvents; i++)
     {
-        fSimTree->GetEntry(i);
-        const int Na = int(Nancestors(f));
+        // fSimTree->GetEntry(i);
+        const int Na = int(Nancestors(f, fvNpart.at(i), fvNcoll.at(i)));
         float nHits{0.};
         for (int j=0; j<Na; ++j) nHits += (int)fNbdHisto.GetRandom();
         
