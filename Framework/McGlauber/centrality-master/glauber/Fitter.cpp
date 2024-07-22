@@ -229,6 +229,9 @@ void Glauber::Fitter::SetGlauberFitHisto (float f, float mu, float k, float p, i
 
     std::unique_ptr<TH1F> htemp {(TH1F*)fNbdHisto.Clone("htemp")}; // WTF??? Not working without pointer
     int plp_counter=0, nentries = (int)(n*(1.-p));
+    #ifdef __OMP_FOUND__
+        #pragma omp parallel for reduction(+ : plp_counter)
+        #endif
     for (int i=0; i<nentries; i++)
     {
         // std::cout << "\tGlauber::Fitter::SetGlauberFitHisto: Constructing multiplicity, event [" << i 

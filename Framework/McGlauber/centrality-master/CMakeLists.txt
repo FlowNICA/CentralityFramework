@@ -20,8 +20,14 @@ if (CMAKE_BUILD_TYPE MATCHES DEBUG)
     set(CMAKE_VERBOSE_MAKEFILE ON)
 endif ()
 
+find_package(OpenMP)
+
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -ggdb -DDEBUG -D__DEBUG -Wall")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -ftree-vectorize -ffast-math -DNODEBUG -fopenmp")
+if(OpenMP_FOUND)
+        set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -ftree-vectorize -ffast-math -DNODEBUG -fopenmp")
+else(OpenMP_FOUND)
+        set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -ftree-vectorize -ffast-math -DNODEBUG")
+endif(OpenMP_FOUND)
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELEASE} -ggdb")
 message(STATUS "Using CXX flags for ${CMAKE_BUILD_TYPE}: ${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}}")
 
@@ -47,28 +53,47 @@ list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/lib")
 #---Locate the ROOT package and defines a number of variables (e.g. ROOT_INCLUDE_DIRS)
 find_package(ROOT REQUIRED COMPONENTS Core MathCore RIO Hist Tree)
 
+
 # Define useful ROOT functions and macros (e.g. ROOT_GENERATE_DICTIONARY)
 include(${ROOT_USE_FILE})
 add_definitions(${ROOT_CXX_FLAGS})
 
 include_directories(${CMAKE_SOURCE_DIR} ${ROOT_INCLUDE_DIRS})
 
+include(${ROOT_USE_FILE})
+
+if(OpenMP_FOUND)
+        add_definitions("-D__OMP_FOUND__")
+        add_definitions(${OpenMP_CXX_FLAGS})
+        include_directories(${OpenMP_CXX_INCLUDE_DIRS})
+endif(OpenMP_FOUND)
+
 set(DICT_FILE_NAME G__${PROJECT_NAME})
 set(PCM_FILE_NAME lib${PROJECT_NAME})
 
-
-
 ROOT_GENERATE_DICTIONARY(${DICT_FILE_NAME} ${HEADERS} LINKDEF src/CentralityLinkDef.h)
 add_library(Centrality SHARED ${SOURCES} ${DICT_FILE_NAME})
-target_link_libraries(Centrality ${ROOT_LIBRARIES})
+if(OpenMP_FOUND)
+        target_link_libraries(Centrality ${ROOT_LIBRARIES} ${OpenMP_CXX_INCLUDE_DIRS})
+else()
+        target_link_libraries(Centrality ${ROOT_LIBRARIES})
+endif(OpenMP_FOUND)
 
 # Create a main program using the library
 add_executable(main main.cpp)
-target_link_libraries(main Centrality ${ROOT_LIBRARIES})
+if(OpenMP_FOUND)
+        target_link_libraries(main Centrality ${ROOT_LIBRARIES} ${OpenMP_CXX_INCLUDE_DIRS})
+else()
+        target_link_libraries(main Centrality ${ROOT_LIBRARIES})
+endif(OpenMP_FOUND)
 target_include_directories(main PUBLIC src)
 
 add_executable(glauber glauber/main.cpp)
-target_link_libraries(glauber ${ROOT_LIBRARIES} Centrality)
+if(OpenMP_FOUND)
+        target_link_libraries(glauber ${ROOT_LIBRARIES} ${OpenMP_CXX_INCLUDE_DIRS} Centrality)
+else()
+        target_link_libraries(glauber ${ROOT_LIBRARIES}Centrality)
+endif(OpenMP_FOUND)
 
 # install(FILES ${HEADERS} DESTINATION include)
 # install(TARGETS Centrality DESTINATION lib)
