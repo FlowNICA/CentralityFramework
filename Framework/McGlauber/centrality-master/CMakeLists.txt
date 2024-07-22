@@ -92,7 +92,7 @@ add_executable(glauber glauber/main.cpp)
 if(OpenMP_FOUND)
         target_link_libraries(glauber ${ROOT_LIBRARIES} ${OpenMP_CXX_INCLUDE_DIRS} Centrality)
 else()
-        target_link_libraries(glauber ${ROOT_LIBRARIES}Centrality)
+        target_link_libraries(glauber ${ROOT_LIBRARIES} Centrality)
 endif(OpenMP_FOUND)
 
 # install(FILES ${HEADERS} DESTINATION include)
