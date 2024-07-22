@@ -16,6 +16,9 @@
 #include "TTree.h"
 // #include "TMinuit.h"
 
+#ifdef __OMP_FOUND__
+#include <omp.h>
+#endif
 
 namespace Glauber
 {
