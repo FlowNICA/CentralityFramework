@@ -20,7 +20,12 @@ if (CMAKE_BUILD_TYPE MATCHES DEBUG)
     set(CMAKE_VERBOSE_MAKEFILE ON)
 endif ()
 
-find_package(OpenMP)
+if (NOT DEFINED omp)
+        set(omp OFF)
+endif()
+if (omp STREQUAL ON)
+        find_package(OpenMP)
+endif()
 
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -ggdb -DDEBUG -D__DEBUG -Wall")
 if(OpenMP_FOUND)

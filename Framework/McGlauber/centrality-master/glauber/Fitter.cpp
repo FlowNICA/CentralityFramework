@@ -152,8 +152,8 @@ float Glauber::Fitter::Nancestors(float f) const
 {
     if       (fMode == "Default")    return f*fNpart + (1-f)*fNcoll;
     else if  (fMode == "PSD")        return f-fNpart;
-    else if  (fMode == "Npart")      return TMath::Power(fNpart, f); 
-    else if  (fMode == "Ncoll")      return TMath::Power(fNcoll, f);
+    else if  (fMode == "Npart")      return pow(fNpart, f); 
+    else if  (fMode == "Ncoll")      return pow(fNcoll, f);
     else if  (fMode == "STAR")       return (1-f)*fNpart/2. + f*fNcoll;
     
     return -1.;
@@ -163,8 +163,8 @@ float Glauber::Fitter::Nancestors(float f, float npart, float ncoll) const
 {
     if       (fMode == "Default")    return f*npart + (1-f)*ncoll;
     else if  (fMode == "PSD")        return f-npart;
-    else if  (fMode == "Npart")      return TMath::Power(npart, f); 
-    else if  (fMode == "Ncoll")      return TMath::Power(ncoll, f);
+    else if  (fMode == "Npart")      return pow(npart, f); 
+    else if  (fMode == "Ncoll")      return pow(ncoll, f);
     else if  (fMode == "STAR")       return (1-f)*npart/2. + f*ncoll;
     
     return -1.;
@@ -177,8 +177,8 @@ float Glauber::Fitter::NancestorsMax(float f) const
     
     if       (fMode == "Default")    return f*NpartMax + (1-f)*NcollMax;
     else if  (fMode == "PSD")        return f;
-    else if  (fMode == "Npart")      return TMath::Power(NpartMax, f); 
-    else if  (fMode == "Ncoll")      return TMath::Power(NcollMax, f);
+    else if  (fMode == "Npart")      return pow(NpartMax, f); 
+    else if  (fMode == "Ncoll")      return pow(NcollMax, f);
     else if  (fMode == "STAR")       return (1-f)*NpartMax/2. + f*NcollMax;
     
     return -1.;
@@ -231,11 +231,11 @@ void Glauber::Fitter::SetGlauberFitHisto (float f, float mu, float k, float p, i
     int plp_counter=0, nentries = (int)(n*(1.-p));
     #ifdef __OMP_FOUND__
         #pragma omp parallel for reduction(+ : plp_counter)
-        #endif
+    #endif
     for (int i=0; i<nentries; i++)
     {
-        // std::cout << "\tGlauber::Fitter::SetGlauberFitHisto: Constructing multiplicity, event [" << i 
-        //     << "/" << nentries <<"]\r" << std::flush;
+        std::cout << "\tGlauber::Fitter::SetGlauberFitHisto: Constructing multiplicity, event [" << i 
+            << "/" << nentries <<"]\r" << std::flush;
         const int Na = int(Nancestors(f, fvNpart.at(i), fvNcoll.at(i)));
                 
         float nHits {0.};
@@ -473,10 +473,10 @@ float Glauber::Fitter::GetChi2 () const
     for (int i=lowchibin; i<=highchibin; ++i) 
     {
         if (fDataHisto.GetBinContent(i) < 1.0) continue;
-        const float error2 = TMath::Power(fDataHisto.GetBinError(i), 2) + TMath::Power(fGlauberFitHisto.GetBinError(i), 2);
+        const float error2 = pow(fDataHisto.GetBinError(i), 2) + pow(fGlauberFitHisto.GetBinError(i), 2);
 //	std::cout<<"i="<<i<<"  DataError="<<fDataHisto.GetBinError(i)<<std::endl;
 //	std::cout<<"i="<<i<<"  GlauberError="<<fGlauberFitHisto.GetBinError(i)<<std::endl;
-        const float diff2 = TMath::Power((fGlauberFitHisto.GetBinContent(i) - fDataHisto.GetBinContent(i)), 2) / error2;
+        const float diff2 = pow((fGlauberFitHisto.GetBinContent(i) - fDataHisto.GetBinContent(i)), 2) / error2;
 //	std::cout<<"i="<<i<<"  DataContent="<<fDataHisto.GetBinContent(i)<<std::endl;
 //	std::cout<<"i="<<i<<"  GlauberContent="<<fGlauberFitHisto.GetBinContent(i)<<std::endl;
 
@@ -501,7 +501,7 @@ float Glauber::Fitter::GetChi2Error () const
     for (int i=lowchibin; i<=highchibin; ++i) 
     {
         if (fDataHisto.GetBinContent(i) < 1.0) continue;
-        const float error2 = TMath::Power(fDataHisto.GetBinError(i), 2) + TMath::Power(fGlauberFitHisto.GetBinError(i), 2);
+        const float error2 = pow(fDataHisto.GetBinError(i), 2) + pow(fGlauberFitHisto.GetBinError(i), 2);
 //	std::cout<<"i="<<i<<"  DataError="<<fDataHisto.GetBinError(i)<<std::endl;
 //	std::cout<<"i="<<i<<"  GlauberError="<<fGlauberFitHisto.GetBinError(i)<<std::endl;
         const float diff = (fGlauberFitHisto.GetBinContent(i) - fDataHisto.GetBinContent(i));
@@ -509,10 +509,10 @@ float Glauber::Fitter::GetChi2Error () const
 //	std::cout<<"i="<<i<<"  GlauberContent="<<fGlauberFitHisto.GetBinContent(i)<<std::endl;
 	const float error_diff = (fGlauberFitHisto.GetBinError(i) - fDataHisto.GetBinError(i));
 
-        chi2_error += TMath::Power(diff*error_diff/error2, 2);
+        chi2_error += pow(diff*error_diff/error2, 2);
     }
     
-    chi2_error = 2*TMath::Power(chi2_error,0.5) / (highchibin - lowchibin + 1);
+    chi2_error = 2*pow(chi2_error,0.5) / (highchibin - lowchibin + 1);
     return chi2_error;
 }
 
