@@ -155,6 +155,7 @@ float Glauber::Fitter::Nancestors(float f) const
     else if  (fMode == "Npart")      return pow(fNpart, f); 
     else if  (fMode == "Ncoll")      return pow(fNcoll, f);
     else if  (fMode == "STAR")       return (1-f)*fNpart/2. + f*fNcoll;
+    else if  (fMode == "HADES")      return 1. - f*fNpart*fNpart;
     
     return -1.;
 }
@@ -166,6 +167,7 @@ float Glauber::Fitter::Nancestors(float f, float npart, float ncoll) const
     else if  (fMode == "Npart")      return pow(npart, f); 
     else if  (fMode == "Ncoll")      return pow(ncoll, f);
     else if  (fMode == "STAR")       return (1-f)*npart/2. + f*ncoll;
+    else if  (fMode == "HADES")      return 1. - f*npart*npart;
     
     return -1.;
 }
@@ -180,6 +182,8 @@ float Glauber::Fitter::NancestorsMax(float f) const
     else if  (fMode == "Npart")      return pow(NpartMax, f); 
     else if  (fMode == "Ncoll")      return pow(NcollMax, f);
     else if  (fMode == "STAR")       return (1-f)*NpartMax/2. + f*NcollMax;
+    else if  (fMode == "HADES")      return 1. - f*NpartMax*NpartMax;
+
     
     return -1.;
 }
@@ -234,8 +238,10 @@ void Glauber::Fitter::SetGlauberFitHisto (float f, float mu, float k, float p, i
     #endif
     for (int i=0; i<nentries; i++)
     {
-        std::cout << "\tGlauber::Fitter::SetGlauberFitHisto: Constructing multiplicity, event [" << i 
-            << "/" << nentries <<"]\r" << std::flush;
+        #ifndef __OMP_FOUND__
+            std::cout << "\tGlauber::Fitter::SetGlauberFitHisto: Constructing multiplicity, event [" << i 
+               << "/" << nentries <<"]\r" << std::flush;
+        #endif
         const int Na = int(Nancestors(f, fvNpart.at(i), fvNcoll.at(i)));
                 
         float nHits {0.};
@@ -252,8 +258,8 @@ void Glauber::Fitter::SetGlauberFitHisto (float f, float mu, float k, float p, i
         }
         fGlauberFitHisto.Fill(nHits);
         fB_VS_Multiplicity.Fill(nHits,fvB.at(i));
-        fNpart_VS_Multiplicity.Fill(nHits,(float)fvNpart.at(i));
-        fNcoll_VS_Multiplicity.Fill(nHits,(float)fvNcoll.at(i));
+        fNpart_VS_Multiplicity.Fill(nHits,fvNpart.at(i));
+        fNcoll_VS_Multiplicity.Fill(nHits,fvNcoll.at(i));
         fEcc1_VS_Multiplicity.Fill(nHits,fvEcc1.at(i));
         fPsi1_VS_Multiplicity.Fill(nHits,fvPsi1.at(i));
         fEcc2_VS_Multiplicity.Fill(nHits,fvEcc2.at(i));
@@ -268,7 +274,9 @@ void Glauber::Fitter::SetGlauberFitHisto (float f, float mu, float k, float p, i
     if (Norm2Data)
         NormalizeGlauberFit();
 
-    // std::cout << "\t                                                                                                \r" << std::flush;
+    #ifndef __OMP_FOUND__
+        std::cout << "\t                                                                                                \r" << std::flush;
+    #endif
 }
 
 
@@ -593,9 +601,11 @@ std::unique_ptr<TH1F> Glauber::Fitter::GetModelHisto (const float range[2], TStr
 
     std::unique_ptr<TH1F> hModel(new TH1F ("hModel", "name", 100, fSimTree->GetMinimum(name),  fSimTree->GetMaximum(name)) );
     int plp_counter = 0, nentries = (int)(nEvents*(1.-p));
+    #ifdef __OMP_FOUND__
+        #pragma omp parallel for reduction(+ : plp_counter)
+    #endif
     for (int i=0; i<nentries; i++)
     {
-        // fSimTree->GetEntry(i);
         const int Na = int(Nancestors(f, fvNpart.at(i), fvNcoll.at(i)));
         float nHits{0.};
         for (int j=0; j<Na; ++j) nHits += (int)fNbdHisto.GetRandom();
