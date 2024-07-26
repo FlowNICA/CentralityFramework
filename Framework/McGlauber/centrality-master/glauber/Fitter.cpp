@@ -154,6 +154,8 @@ float Glauber::Fitter::Nancestors(float f) const
     else if  (fMode == "PSD")        return f-fNpart;
     else if  (fMode == "Npart")      return pow(fNpart, f); 
     else if  (fMode == "Ncoll")      return pow(fNcoll, f);
+    else if  (fMode == "NpartFast")  return pow(fNpart, f)/pow(10, f);
+    else if  (fMode == "NcollFast")  return pow(fNcoll, f)/pow(100, f);
     else if  (fMode == "STAR")       return (1-f)*fNpart/2. + f*fNcoll;
     else if  (fMode == "HADES")      return (1. - f*fNpart*fNpart)*fNpart;
     
@@ -166,6 +168,8 @@ float Glauber::Fitter::Nancestors(float f, float npart, float ncoll) const
     else if  (fMode == "PSD")        return f-npart;
     else if  (fMode == "Npart")      return pow(npart, f); 
     else if  (fMode == "Ncoll")      return pow(ncoll, f);
+    else if  (fMode == "NpartFast")  return pow(npart, f)/pow(10, f); 
+    else if  (fMode == "NcollFast")  return pow(ncoll, f)/pow(100, f);
     else if  (fMode == "STAR")       return (1-f)*npart/2. + f*ncoll;
     else if  (fMode == "HADES")      return (1. - f*npart*npart)*npart;
     
@@ -181,6 +185,8 @@ float Glauber::Fitter::NancestorsMax(float f) const
     else if  (fMode == "PSD")        return f;
     else if  (fMode == "Npart")      return pow(NpartMax, f); 
     else if  (fMode == "Ncoll")      return pow(NcollMax, f);
+    else if  (fMode == "NpartFast")  return pow(NpartMax, f)/pow(10, f); 
+    else if  (fMode == "NcollFast")  return pow(NcollMax, f)/pow(100, f);
     else if  (fMode == "STAR")       return (1-f)*NpartMax/2. + f*NcollMax;
     else if  (fMode == "HADES")      return (1. - f*NpartMax*NpartMax)*NpartMax;
 
