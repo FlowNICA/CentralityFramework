@@ -155,7 +155,7 @@ float Glauber::Fitter::Nancestors(float f) const
     else if  (fMode == "Npart")      return pow(fNpart, f); 
     else if  (fMode == "Ncoll")      return pow(fNcoll, f);
     else if  (fMode == "STAR")       return (1-f)*fNpart/2. + f*fNcoll;
-    else if  (fMode == "HADES")      return 1. - f*fNpart*fNpart;
+    else if  (fMode == "HADES")      return (1. - f*fNpart*fNpart)*fNpart;
     
     return -1.;
 }
@@ -167,7 +167,7 @@ float Glauber::Fitter::Nancestors(float f, float npart, float ncoll) const
     else if  (fMode == "Npart")      return pow(npart, f); 
     else if  (fMode == "Ncoll")      return pow(ncoll, f);
     else if  (fMode == "STAR")       return (1-f)*npart/2. + f*ncoll;
-    else if  (fMode == "HADES")      return 1. - f*npart*npart;
+    else if  (fMode == "HADES")      return (1. - f*npart*npart)*npart;
     
     return -1.;
 }
@@ -182,7 +182,7 @@ float Glauber::Fitter::NancestorsMax(float f) const
     else if  (fMode == "Npart")      return pow(NpartMax, f); 
     else if  (fMode == "Ncoll")      return pow(NcollMax, f);
     else if  (fMode == "STAR")       return (1-f)*NpartMax/2. + f*NcollMax;
-    else if  (fMode == "HADES")      return 1. - f*NpartMax*NpartMax;
+    else if  (fMode == "HADES")      return (1. - f*NpartMax*NpartMax)*NpartMax;
 
     
     return -1.;
@@ -413,7 +413,7 @@ float Glauber::Fitter::FitGlauber (float *par, Float_t f0, Float_t f1, Int_t k0,
             for (float h=p0; h<=p1; h=h+fPstep)
             {
                 p = h;
-                mu = fMaxValue / NancestorsMax(f) ;
+                mu = fMaxValue / NancestorsMax(f);
                 const float mu_min = 0.0*mu;
                 const float mu_max = 1.0*mu;
 
