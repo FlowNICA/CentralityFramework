@@ -229,9 +229,15 @@ void Glauber::Fitter::SetGlauberFitHisto (float f, float mu, float k, float p, i
     fEcc5_VS_Multiplicity.SetName("Ecc5_VS_Multiplicity");
     fPsi5_VS_Multiplicity.SetName("Psi5_VS_Multiplicity");
     
-    SetNBDhist(mu,  k);
+    #ifndef __BOOST_FOUND__
+        SetNBDhist(mu,  k);
+        std::unique_ptr<TH1F> htemp {(TH1F*)fNbdHisto.Clone("htemp")}; // WTF??? Not working without pointer
+    #endif
+    #ifdef __BOOST_FOUND__
+        boost::mt19937 rngnum;
+        boost::random::negative_binomial_distribution<int> nbd(k, (float)(k/(k+mu)));
+    #endif
 
-    std::unique_ptr<TH1F> htemp {(TH1F*)fNbdHisto.Clone("htemp")}; // WTF??? Not working without pointer
     int plp_counter=0, nentries = (int)(n*(1.-p));
     #ifdef __OMP_FOUND__
         #pragma omp parallel for reduction(+ : plp_counter)
@@ -245,11 +251,21 @@ void Glauber::Fitter::SetGlauberFitHisto (float f, float mu, float k, float p, i
         const int Na = int(Nancestors(f, fvNpart.at(i), fvNcoll.at(i)));
                 
         float nHits {0.};
-        for (int j=0; j<Na; j++) nHits += int(htemp->GetRandom());
+        #ifndef __BOOST_FOUND__
+            for (int j=0; j<Na; j++) nHits += int(htemp->GetRandom());
+        #endif
+        #ifdef __BOOST_FOUND__
+            for (int j=0; j<Na; j++) nHits += nbd(rngnum);
+        #endif
         if (p > 1e-10 && gRandom->Rndm() <= p){
             const int Na1 = int(Nancestors(f, fvNpart.at(nentries+plp_counter), fvNcoll.at(nentries+plp_counter)));
             for (int j = 0; j < Na1; j++)
+            #ifndef __BOOST_FOUND__
                 nHits += int(htemp->GetRandom());
+            #endif
+            #ifdef __BOOST_FOUND__
+                nHits += (int)nbd(rngnum);
+            #endif
             plp_counter++;
             fGlauberPlpHisto.Fill(nHits);
         }
@@ -594,7 +610,13 @@ std::unique_ptr<TH1F> Glauber::Fitter::GetModelHisto (const float range[2], TStr
     float modelpar{-999.};
     fSimTree->SetBranchAddress(name, &modelpar);
         
-    SetNBDhist(mu, k);
+    #ifndef __BOOST_FOUND__
+        SetNBDhist(mu,  k);
+    #endif
+    #ifdef __BOOST_FOUND__
+        boost::mt19937 rngnum;
+        boost::random::negative_binomial_distribution<int> nbd(k, (float)(k/(k+mu)));
+    #endif
   
 //     TRandom random;  
 //     random.SetSeed(mu*k);
@@ -608,12 +630,22 @@ std::unique_ptr<TH1F> Glauber::Fitter::GetModelHisto (const float range[2], TStr
     {
         const int Na = int(Nancestors(f, fvNpart.at(i), fvNcoll.at(i)));
         float nHits{0.};
-        for (int j=0; j<Na; ++j) nHits += (int)fNbdHisto.GetRandom();
+        #ifndef __BOOST_FOUND__
+            for (int j=0; j<Na; ++j) nHits += (int)fNbdHisto.GetRandom();
+        #endif
+        #ifdef __BOOST_FOUND__
+            for (int j=0; j<Na; j++) nHits += nbd(rngnum);
+        #endif
 
         if (p > 1e-10 && gRandom->Rndm() <= p){
             const int Na1 = int(Nancestors(f, fvNpart.at(nentries+plp_counter), fvNcoll.at(nentries+plp_counter)));
             for (int j = 0; j < Na1; j++)
+            #ifndef __BOOST_FOUND__
                 nHits += int(fNbdHisto.GetRandom());
+            #endif
+            #ifdef __BOOST_FOUND__
+                nHits += nbd(rngnum);
+            #endif
             plp_counter++;
         }
         

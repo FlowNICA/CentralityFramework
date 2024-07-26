@@ -19,6 +19,11 @@
 #ifdef __OMP_FOUND__
 #include <omp.h>
 #endif
+#ifdef __BOOST_FOUND__
+#include <random>
+#include <boost/random.hpp>
+#include <boost/math/distributions/negative_binomial.hpp>
+#endif
 
 namespace Glauber
 {
