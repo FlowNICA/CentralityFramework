@@ -1,6 +1,6 @@
 void CentralityClasses(Int_t CentralityClasses){
-	TFile *f1 = new TFile("/weekly/parfenov/Soft/Centrality/OUT/new_recoUrQMD_STARlike_7gev_bibi_NoSecondary/2443540/file/root/HistoCutResult.root");
-	TFile *f5 = new TFile("/weekly/parfenov/Soft/Centrality/OUT/new_recoUrQMD_STARlike_7gev_bibi_NoSecondary/2443540/file/root/glauber_qa.root");
+	TFile *f1 = new TFile("~/Soft/CentralityFramework/Framework/McGlauber/HistoCutResult.root");
+	TFile *f5 = new TFile("~/Soft/CentralityFramework/Framework/McGlauber/centrality-master/build/glauber_qa_default_hMultRun8_VtxZ020.root");
 	TTree *Borders=(TTree*)f1->Get("Borders");
 	
 	TFile *fOut   = new TFile("FINAL.root", "recreate");
@@ -149,8 +149,8 @@ void CentralityClasses(Int_t CentralityClasses){
 	legend1.Draw("same");
 	c1->Write();
 	for (int i = 0; i <= CentralityClasses; i++) B_VS_CentralityHisto[i] -> Write();
-	c1->SaveAs("/home/segal/NICA/NICA/11GeV/B_VS_Centrality.pdf");
-	c1->SaveAs("/home/segal/NICA/NICA/11GeV/B_VS_Centrality.C");
+	c1->SaveAs("./B_VS_Centrality.pdf");
+	c1->SaveAs("./B_VS_Centrality.C");
 
 	TCanvas* c2 = new TCanvas("Npart_VS_Centrality","Npart_VS_Centrality", 1500, 900);
 	c2->SetLogy();
@@ -162,8 +162,8 @@ void CentralityClasses(Int_t CentralityClasses){
 	legend2.Draw("same");
 	c2->Write();
 	for (int i = 0; i <= CentralityClasses; i++) Npart_VS_CentralityHisto[i] -> Write();
-	c2->SaveAs("/home/segal/NICA/NICA/11GeV/Npart_VS_Centrality.pdf");
-	c2->SaveAs("/home/segal/NICA/NICA/11GeV/Npart_VS_Centrality.C");
+	c2->SaveAs("./Npart_VS_Centrality.pdf");
+	c2->SaveAs("./Npart_VS_Centrality.C");
 
 	TCanvas* c3 = new TCanvas("Ncoll_VS_Centrality","Ncoll_VS_Centrality", 1500, 900);
 	c3->SetLogy();
@@ -175,8 +175,8 @@ void CentralityClasses(Int_t CentralityClasses){
 	legend3.Draw("same");
 	c3->Write();
 	for (int i = 0; i <= CentralityClasses; i++) Ncoll_VS_CentralityHisto[i] -> Write();
-	c3->SaveAs("/home/segal/NICA/NICA/11GeV/Ncoll_VS_Centrality.pdf");
-	c3->SaveAs("/home/segal/NICA/NICA/11GeV/Ncoll_VS_Centrality.C");	
+	c3->SaveAs("./Ncoll_VS_Centrality.pdf");
+	c3->SaveAs("./Ncoll_VS_Centrality.C");	
 
 	TCanvas* c13 = new TCanvas("B_average_VS_Centrality","B_average_VS_Centrality", 1500, 900);
 	TLegend legend13(0.1,0.75,0.35,1.0, "<B> VS Centrality");
@@ -184,8 +184,8 @@ void CentralityClasses(Int_t CentralityClasses){
 	B_average_VS_Centrality -> Draw("E1, P, X0");
 	legend13.Draw("same");
 	c13->Write();
-	c13->SaveAs("/home/segal/NICA/NICA/11GeV/B_VS_Centrality_Result.pdf");
-	c13->SaveAs("/home/segal/NICA/NICA/11GeV/B_VS_Centrality_Result.C");
+	c13->SaveAs("./B_VS_Centrality_Result.pdf");
+	c13->SaveAs("./B_VS_Centrality_Result.C");
 
 	TCanvas* c14 = new TCanvas("Npart_average_VS_Centrality","Npart_average_VS_Centrality", 1500, 900);
 	TLegend legend14(0.75,0.75,1.0,1.0, "<N_{part}> VS Centrality");
@@ -193,8 +193,8 @@ void CentralityClasses(Int_t CentralityClasses){
 	Npart_average_VS_Centrality -> Draw("E1, P, X0");
 	legend14.Draw("same");
 	c14->Write();
-	c14->SaveAs("/home/segal/NICA/NICA/11GeV/Npart_VS_Centrality_Result.pdf");
-	c14->SaveAs("/home/segal/NICA/NICA/11GeV/Npart_VS_Centrality_Result.C");
+	c14->SaveAs("./Npart_VS_Centrality_Result.pdf");
+	c14->SaveAs("./Npart_VS_Centrality_Result.C");
 
 	TCanvas* c15 = new TCanvas("Ncoll_average_VS_Centrality","Ncoll_average_VS_Centrality", 1500, 900);
 	TLegend legend15(0.75,0.75,1.0,1.0, "<N_{coll}> VS Centrality");
@@ -202,8 +202,8 @@ void CentralityClasses(Int_t CentralityClasses){
 	Ncoll_average_VS_Centrality -> Draw("E1, P, X0");
 	legend15.Draw("same");
 	c15->Write();
-	c15->SaveAs("/home/segal/NICA/NICA/11GeV/Ncoll_VS_Centrality_Result.pdf");
-	c15->SaveAs("/home/segal/NICA/NICA/11GeV/Ncoll_VS_Centrality_Result.C");
+	c15->SaveAs("./Ncoll_VS_Centrality_Result.pdf");
+	c15->SaveAs("./Ncoll_VS_Centrality_Result.C");
 	
 	TCanvas* c16 = new TCanvas("B_VS_Centrality","B_VS_Centrality", 3000, 1800);
 	TLegend legend16(0.75,0.75,1.0,1.0, "B VS Centrality");
@@ -214,8 +214,8 @@ void CentralityClasses(Int_t CentralityClasses){
 	legend16.Draw("same");
 	c16->cd();
 	c16->Write();
-	c16->SaveAs("/home/segal/NICA/NICA/11GeV/B_VS_Centrality.pdf");
-	c16->SaveAs("/home/segal/NICA/NICA/11GeV/B_VS_Centrality.C");
+	c16->SaveAs("./B_VS_Centrality.pdf");
+	c16->SaveAs("./B_VS_Centrality.C");
 
 	std::unique_ptr <TCanvas> c17 {new TCanvas("Npart_VS_Centrality","N_{part} VS Centrality", 3000, 1800)};
 	gPad->SetLogy();
@@ -226,8 +226,8 @@ void CentralityClasses(Int_t CentralityClasses){
 	for (int i = 0; i < CentralityClasses; i++) Npart_VS_CentralityHisto[i]->Draw("same");
 	legend17.Draw("same");
 	c17->Write();
-	c17->SaveAs("/home/segal/NICA/NICA/11GeV/Npart_VS_Centrality.pdf");
-	c17->SaveAs("/home/segal/NICA/NICA/11GeV/Npart_VS_Centrality.C");
+	c17->SaveAs("./Npart_VS_Centrality.pdf");
+	c17->SaveAs("./Npart_VS_Centrality.C");
 
 	std::unique_ptr <TCanvas> c18 {new TCanvas("Ncoll_VS_Centrality","N_{coll}_VS_Centrality", 3000, 1800)};
 	gPad->SetLogy();
@@ -238,8 +238,8 @@ void CentralityClasses(Int_t CentralityClasses){
 	for (int i = 0; i <= CentralityClasses; i++) Ncoll_VS_CentralityHisto[i]->Draw("same");
 	legend18.Draw("same");
 	c18->Write();
-	c18->SaveAs("/home/segal/NICA/NICA/11GeV/Ncoll_VS_Centrality.pdf");
-	c18->SaveAs("/home/segal/NICA/NICA/11GeV/Ncoll_VS_Centrality.C");
+	c18->SaveAs("./Ncoll_VS_Centrality.pdf");
+	c18->SaveAs("./Ncoll_VS_Centrality.C");
 
 	TCanvas* c19 = new TCanvas("Result","", 9000, 2000);
 	c19->Divide(3,1);
@@ -259,8 +259,8 @@ void CentralityClasses(Int_t CentralityClasses){
 	Ncoll_average_VS_Centrality -> Draw("E1, P, X0");
 	legend1915.Draw("same");
 	c19->Write();
-	c19->SaveAs("/home/segal/NICA/NICA/11GeV/Result.pdf");
-	c19->SaveAs("/home/segal/NICA/NICA/11GeV/Result.C");
+	c19->SaveAs("./Result.pdf");
+	c19->SaveAs("./Result.C");
 
 	B_average_VS_Centrality     -> Write();
 	Npart_average_VS_Centrality -> Write();
