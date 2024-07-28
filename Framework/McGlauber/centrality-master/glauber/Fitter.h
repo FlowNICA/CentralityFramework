@@ -99,6 +99,7 @@ namespace Glauber
         TH1F GetEcc5Histo ()      const { return fEcc5Histo; }
         TH1F GetPsi5Histo ()      const { return fPsi5Histo; }
 
+	TH2F GetGlauberPlpEv1Ev2 ()     const { return fGlauberPlpEv1Ev2; }
 	TH2F GetB_VS_Multiplicity ()     const { return fB_VS_Multiplicity; }
 	TH2F GetNpart_VS_Multiplicity () const { return fNpart_VS_Multiplicity; }
 	TH2F GetNcoll_VS_Multiplicity () const { return fNcoll_VS_Multiplicity; }
@@ -113,6 +114,7 @@ namespace Glauber
 	TH2F GetEcc5_VS_Multiplicity () const { return fEcc5_VS_Multiplicity; }
 	TH2F GetPsi5_VS_Multiplicity () const { return fPsi5_VS_Multiplicity; }
 	
+    TH2F GetBestPlpEv1Ev2 () const { return fBestPlpEv1Ev2; }
 	TH2F GetBestB_VS_Multiplicity ()     const { return fBestB_VS_Multiplicity; }
 	TH2F GetBestNpart_VS_Multiplicity () const { return fBestNpart_VS_Multiplicity; }
 	TH2F GetBestNcoll_VS_Multiplicity () const { return fBestNcoll_VS_Multiplicity; }
@@ -158,6 +160,7 @@ namespace Glauber
     Int_t fKstep;
     Float_t fPstep;
 
+    TH2F fGlauberPlpEv1Ev2;
 	TH2F fB_VS_Multiplicity;
 	TH2F fNpart_VS_Multiplicity;
 	TH2F fNcoll_VS_Multiplicity;
@@ -172,6 +175,7 @@ namespace Glauber
     TH2F fEcc5_VS_Multiplicity;
     TH2F fPsi5_VS_Multiplicity;
     
+    TH2F fBestPlpEv1Ev2;
 	TH2F fBestB_VS_Multiplicity;
 	TH2F fBestNpart_VS_Multiplicity;
 	TH2F fBestNcoll_VS_Multiplicity;

@@ -44,6 +44,7 @@ namespace Glauber
         /*const*/ TH1F hBestPlp = fit.GetBestPlpHisto();
         /*const*/ TH1F hBestSng = fit.GetBestSngHisto();
 
+          TH2F hBestPlpEv1Ev2 = fit.GetBestPlpEv1Ev2();
 		  TH2F hBestB_VS_Multiplicity=fit.GetBestB_VS_Multiplicity();
 		  TH2F hBestNpart_VS_Multiplicity=fit.GetBestNpart_VS_Multiplicity();
 		  TH2F hBestNcoll_VS_Multiplicity=fit.GetBestNcoll_VS_Multiplicity();
@@ -97,6 +98,7 @@ namespace Glauber
                 hBestFit.Write();
                 hBestPlp.Write();
                 hBestSng.Write();
+                hBestPlpEv1Ev2.Write();
                 hBestB_VS_Multiplicity.Write();
                 hBestNpart_VS_Multiplicity.Write();
                 hBestNcoll_VS_Multiplicity.Write();

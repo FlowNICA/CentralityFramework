@@ -204,6 +204,7 @@ void Glauber::Fitter::SetGlauberFitHisto (float f, float mu, float k, float p, i
     fGlauberFitHisto = TH1F("glaub", "", fNbins*1.3, 0, 1.3*fMaxValue);
     fGlauberPlpHisto = TH1F("glplp", "", fNbins*1.3, 0, 1.3*fMaxValue);
     fGlauberSngHisto = TH1F("glsng", "", fNbins*1.3, 0, 1.3*fMaxValue);
+    fGlauberPlpEv1Ev2 = TH2F("", "Multiplicity ev1 vs Multiplicity ev2;nHits 1;nHits 2", fNbins*1.3, 0, 1.3*fMaxValue, fNbins*1.3, 0, 1.3*fMaxValue);
     fB_VS_Multiplicity = TH2F("", "B VS Multiplicity;nHits;B, fm", fNbins*1.3, 0, 1.3*fMaxValue, 200, 0, 20);
     fNpart_VS_Multiplicity = TH2F("", "N_{part} VS Multiplicity;nHits;N_{part}", fNbins*1.3, 0, 1.3*fMaxValue, 10000, 0, 10000);
     fNcoll_VS_Multiplicity = TH2F("", "N_{coll} VS Multiplicity;nHits;N_{coll}", fNbins*1.3, 0, 1.3*fMaxValue, 10000, 0, 10000);
@@ -221,6 +222,7 @@ void Glauber::Fitter::SetGlauberFitHisto (float f, float mu, float k, float p, i
     fGlauberFitHisto.SetName("glaub_fit_histo");
     fGlauberPlpHisto.SetName("glaub_plp_histo");
     fGlauberSngHisto.SetName("glaub_sng_histo");
+    fGlauberPlpEv1Ev2.SetName("glaub_plp_ev1ev2");
     fB_VS_Multiplicity.SetName("B_VS_Multiplicity");
     fNpart_VS_Multiplicity.SetName("Npart_VS_Multiplicity");
     fNcoll_VS_Multiplicity.SetName("Ncoll_VS_Multiplicity");
@@ -256,7 +258,7 @@ void Glauber::Fitter::SetGlauberFitHisto (float f, float mu, float k, float p, i
         #endif
         const int Na = int(Nancestors(f, fvNpart.at(i), fvNcoll.at(i)));
                 
-        float nHits {0.};
+        float nHits {0.}, nPlp {0.};
         #ifndef __BOOST_FOUND__
             for (int j=0; j<Na; j++) nHits += int(htemp->GetRandom());
         #endif
@@ -267,13 +269,15 @@ void Glauber::Fitter::SetGlauberFitHisto (float f, float mu, float k, float p, i
             const int Na1 = int(Nancestors(f, fvNpart.at(nentries+plp_counter), fvNcoll.at(nentries+plp_counter)));
             for (int j = 0; j < Na1; j++)
             #ifndef __BOOST_FOUND__
-                nHits += int(htemp->GetRandom());
+                nPlp += int(htemp->GetRandom());
             #endif
             #ifdef __BOOST_FOUND__
-                nHits += (int)nbd(rngnum);
+                nPlp += (int)nbd(rngnum);
             #endif
             plp_counter++;
-            fGlauberPlpHisto.Fill(nHits);
+            fGlauberPlpHisto.Fill(nHits+nPlp);
+            fGlauberPlpEv1Ev2.Fill(nHits, nPlp);
+            nHits += nPlp;
         }
         else{
             fGlauberSngHisto.Fill(nHits);
@@ -322,7 +326,8 @@ void Glauber::Fitter::NormalizeGlauberFit ()
 //     std::cout << "Scale = " << Scale << std::endl;
     fGlauberFitHisto.Scale(ScaleFactor);    
     fGlauberPlpHisto.Scale(ScaleFactor);    
-    fGlauberSngHisto.Scale(ScaleFactor);    
+    fGlauberSngHisto.Scale(ScaleFactor);  
+    fGlauberPlpEv1Ev2.Scale(ScaleFactor);  
 }
 
 /**
@@ -458,6 +463,7 @@ float Glauber::Fitter::FitGlauber (float *par, Float_t f0, Float_t f1, Int_t k0,
                     fBestFitHisto = fGlauberFitHisto;
                     fBestPlpHisto = fGlauberPlpHisto;
                     fBestSngHisto = fGlauberSngHisto;
+                    fBestPlpEv1Ev2 = fGlauberPlpEv1Ev2;
                     fBestB_VS_Multiplicity=fB_VS_Multiplicity;
                     fBestNpart_VS_Multiplicity=fNpart_VS_Multiplicity;
                     fBestNcoll_VS_Multiplicity=fNcoll_VS_Multiplicity;
