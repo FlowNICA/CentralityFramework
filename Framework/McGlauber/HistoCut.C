@@ -1,9 +1,10 @@
 void HistoCut(Int_t CentralityClasses){
-	TFile *f1 = new TFile("/weekly/parfenov/Soft/Centrality/OUT/new_recoUrQMD_STARlike_7gev_bibi_NoSecondary/2443540/file/root/glauber_qa.root");
-	TFile *f2 = new TFile("/weekly/parfenov/Soft/Centrality/OUT/new_recoUrQMD_STARlike_7gev_bibi_NoSecondary/2443540/file/root/glauber_qa.root");
-	TH1F *FitHisto=(TH1F*)f1->Get("glaub_fit_histo");
-	TH1F *DataHisto=(TH1F*)f2->Get("hRefMultSTAR");
-	//TH1F *DataHisto=(TH1F*)f2->Get("hNpart0");
+	TFile *f1 = new TFile("~/Soft/CentralityFramework/Framework/McGlauber/centrality-master/build/glauber_qa_default_hMultRun8_VtxZ020.root");
+	TFile *f2 = new TFile("~/Soft/CentralityFramework/Framework/McGlauber/centrality-master/build/glauber_qa_default_hMultRun8_VtxZ020.root");
+	TH1F *FitHisto=(TH1F*)f1->Get("glaub_sng_histo");
+	TH1F *FitHistoPlp=(TH1F*)f1->Get("glaub_plp_histo");
+	TH1F *FitHistoAll=(TH1F*)f1->Get("glaub_fit_histo");
+	TH1F *DataHisto=(TH1F*)f2->Get("hMultRun8_VtxZ020");
 
 	Int_t bins = FitHisto->GetNbinsX();
 	cout<<"bins="<<bins<<endl;
@@ -43,14 +44,23 @@ void HistoCut(Int_t CentralityClasses){
 	Double_t sum=0.0;
 	for (Int_t i=bins;i>=2;i--) {
         	sum = sum+FitHisto->GetBinContent(i);
-		cout<<sum<<endl;
-		cout<<j<<endl;
-      		if (sum < (integral/CentralityClasses) && j<CentralityClasses) ResultHisto[j] -> SetBinContent(i, FitHisto->GetBinContent(i));
+		// cout<<sum<<endl;
+		// cout<<j<<endl;
+		// Cut pile-up dominant part
+		bool is_pileup = false;
+		for (int iplp=i; iplp>=2;iplp--){
+			if (FitHisto->GetBinContent(iplp) < FitHistoPlp->GetBinContent(iplp))
+				is_pileup = true;
+		}
+		if (is_pileup)
+			continue;
+		if (sum < (integral/CentralityClasses) && j<CentralityClasses) 
+			ResultHisto[j] -> SetBinContent(i, FitHistoAll->GetBinContent(i));
 		else {
 			if (j<CentralityClasses-1) {j++; sum=0.0;}
-			if (j<CentralityClasses-1) ResultHisto[j] -> SetBinContent(i, FitHisto->GetBinContent(i));
-			}
-   		}
+			if (j<CentralityClasses-1) ResultHisto[j] -> SetBinContent(i, FitHistoAll->GetBinContent(i));
+		}
+	}
 
 	j=CentralityClasses-1;
 	for (Int_t i=2;i<=bins;i++) {
@@ -78,26 +88,27 @@ void HistoCut(Int_t CentralityClasses){
 
 	j=0;
 	for (Int_t i=1; i<=CentralityClasses; i++) {
-		cout<<i<<endl;
+		// cout<<i<<endl;
 		Ncc=i;
 		Int_t l=2;
-        	while ((ResultHisto[j]->GetBinContent(l))<=0 && l<bins) l++;
+		while ((ResultHisto[j]->GetBinContent(l))<=0 && l<bins) l++;
 		MinPercent=(j)*100/CentralityClasses; 
 		MinBorder=ResultHisto[j]->GetBinCenter(l); 
 		BIN=l;
 		for (Int_t q=BIN;q<=bins;q++) {
 			if ((ResultHisto[j]->GetBinContent(q))<=0) {MaxPercent=(j+1)*100/CentralityClasses; MaxBorder=ResultHisto[j]->GetBinCenter(q); break;};
 			if (q==bins) {MaxPercent=(j+1)*100/CentralityClasses; MaxBorder=ResultHisto[j]->GetBinCenter(q);};
-			}
+		}
 		Borders -> Fill();
 		j++;
-   		}
+	}
 
 	TCanvas* c1 = new TCanvas("HistoCutResult","HistoCutResult");
 	TLegend legend1(0.1, 0.2, 0.3, 0.4, "HistoCutResult");
 	for (int i = 0; i < CentralityClasses; i++) legend1.AddEntry(ResultHisto[i], Form("CentralityClass %.1f%%-%.1f%%", i*100.0/CentralityClasses, (i+1)*100.0/CentralityClasses));
 	THStack *ResultHistos = new THStack("HistoCutResult","HistoCutResult");
 	for (int i = 0; i < CentralityClasses; i++) ResultHistos -> Add(ResultHisto[i]);
+	ResultHistos->Add(FitHistoAll);
 	ResultHistos -> Draw("nostack");
 	legend1.Draw("same");
 	c1->Write();
@@ -108,6 +119,7 @@ void HistoCut(Int_t CentralityClasses){
 	for (int i = 0; i < CentralityClasses; i++) legend2.AddEntry(CentralityHisto[i], Form("CentralityClass %.1f%%-%.1f%%", i*100.0/CentralityClasses, (i+1)*100.0/CentralityClasses));
 	THStack *CentralityHistos = new THStack("HistoCutResult","HistoCutResult");
 	for (int i = 0; i < CentralityClasses; i++) CentralityHistos -> Add(CentralityHisto[i]);
+	CentralityHistos->Add(DataHisto);
 	CentralityHistos -> Draw("nostack");
 	legend2.Draw("same");
 	c2->Write();
