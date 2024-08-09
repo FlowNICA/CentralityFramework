@@ -16,8 +16,9 @@
 #include "TTree.h"
 // #include "TMinuit.h"
 
-#ifdef __OMP_FOUND__
-#include <omp.h>
+#ifdef __THREADS_ON__
+#include <thread>
+#include <mutex>
 #endif
 #ifdef __BOOST_FOUND__
 #include <random>
@@ -55,6 +56,7 @@ namespace Glauber
         float Nancestors(float f) const;
         float Nancestors(float f, float npart, float ncoll) const;
         float NancestorsMax(float f) const;
+        bool BuildMultiplicity(float f, float mu, float k, float p, int i_start, int i_stop, int plp_start, int plp_stop, int n);
         
         std::unique_ptr<TH1F> GetModelHisto (const Float_t range[2], TString name, const Float_t par[5], Int_t nEvents);
         
@@ -236,6 +238,12 @@ namespace Glauber
         TString fMode{"Default"};
         
         TString fOutDirName{""};
+
+        #ifdef __THREADS_ON__
+            std::mutex fMtx;
+            unsigned int fNthreads{std::thread::hardware_concurrency()};
+        #endif
+
         ClassDef(Fitter, 2);
         
     };

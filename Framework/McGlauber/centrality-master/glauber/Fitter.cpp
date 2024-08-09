@@ -146,6 +146,12 @@ void Glauber::Fitter::Init(int nEntries, TString fmode)
 
     std::cout << "fNbins = " << fNbins << std::endl;
     std::cout << "fMaxValue = " << fMaxValue << std::endl;
+
+    #ifdef __THREADS_ON__
+        std::cout << std::endl;
+        std::cout << "Number of threads found: " << fNthreads << std::endl;
+        std::cout << std::endl;
+    #endif
 }
 
 float Glauber::Fitter::Nancestors(float f) const
@@ -237,6 +243,34 @@ void Glauber::Fitter::SetGlauberFitHisto (float f, float mu, float k, float p, i
     fEcc5_VS_Multiplicity.SetName("Ecc5_VS_Multiplicity");
     fPsi5_VS_Multiplicity.SetName("Psi5_VS_Multiplicity");
     
+    int nentries = (int)(n*(1.-p));
+    int plp_counter=nentries;
+    #ifndef __THREADS_ON__
+        BuildMultiplicity(f, mu, k, p, 0, nentries, plp_counter, n, nentries);
+    #endif
+    #ifdef __THREADS_ON__
+        std::vector<std::thread> v_thr;
+        for (unsigned int i=0; i<fNthreads; ++i){
+            int n_part  = (int)(n/fNthreads);
+            int i_start = i*n_part;
+            int i_stop  = (int)((i+1)*n_part*(1.-p));
+            int p_start = i_stop;
+            int p_stop  = (i+1)*n_part;
+            v_thr.emplace_back([&]{Glauber::Fitter::BuildMultiplicity(f, mu, k, p, i_start, i_stop, p_start, p_stop, i_stop);});
+        }
+        for (auto &thread : v_thr)
+            thread.join();
+    #endif
+    if (Norm2Data)
+        NormalizeGlauberFit();
+
+    #ifndef __THREADS_ON__
+        std::cout << "\t                                                                                                \r" << std::flush;
+    #endif
+}
+
+bool Glauber::Fitter::BuildMultiplicity(float f, float mu, float k, float p, int i_start, int i_stop, int plp_start, int plp_stop, int n)
+{
     #ifndef __BOOST_FOUND__
         SetNBDhist(mu,  k);
         std::unique_ptr<TH1F> htemp {(TH1F*)fNbdHisto.Clone("htemp")}; // WTF??? Not working without pointer
@@ -245,16 +279,12 @@ void Glauber::Fitter::SetGlauberFitHisto (float f, float mu, float k, float p, i
         boost::mt19937 rngnum;
         boost::random::negative_binomial_distribution<int> nbd(k, (float)(k/(k+mu)));
     #endif
-
-    int plp_counter=0, nentries = (int)(n*(1.-p));
-    #ifdef __OMP_FOUND__
-        #pragma omp parallel for reduction(+ : plp_counter)
-    #endif
-    for (int i=0; i<nentries; i++)
+    int plp_counter = plp_start;
+    for (int i=i_start; i<i_stop; i++)
     {
-        #ifndef __OMP_FOUND__
+        #ifndef __THREADS_ON__
             std::cout << "\tGlauber::Fitter::SetGlauberFitHisto: Constructing multiplicity, event [" << i 
-               << "/" << nentries <<"]\r" << std::flush;
+               << "/" << n <<"]\r" << std::flush;
         #endif
         const int Na = int(Nancestors(f, fvNpart.at(i), fvNcoll.at(i)));
                 
@@ -266,7 +296,7 @@ void Glauber::Fitter::SetGlauberFitHisto (float f, float mu, float k, float p, i
             for (int j=0; j<Na; j++) nHits += nbd(rngnum);
         #endif
         if (p > 1e-10 && gRandom->Rndm() <= p){
-            const int Na1 = int(Nancestors(f, fvNpart.at(nentries+plp_counter), fvNcoll.at(nentries+plp_counter)));
+            const int Na1 = int(Nancestors(f, fvNpart.at(plp_counter), fvNcoll.at(plp_counter)));
             for (int j = 0; j < Na1; j++)
             #ifndef __BOOST_FOUND__
                 nPlp += int(htemp->GetRandom());
@@ -275,11 +305,17 @@ void Glauber::Fitter::SetGlauberFitHisto (float f, float mu, float k, float p, i
                 nPlp += (int)nbd(rngnum);
             #endif
             plp_counter++;
+            #ifdef __THREADS_ON__
+                std::lock_guard<std::mutex> guard(fMtx);
+            #endif
             fGlauberPlpHisto.Fill(nHits+nPlp);
             fGlauberPlpEv1Ev2.Fill(nHits, nPlp);
             nHits += nPlp;
         }
         else{
+            #ifdef __THREADS_ON__
+                std::lock_guard<std::mutex> guard(fMtx);
+            #endif
             fGlauberSngHisto.Fill(nHits);
         }
         fGlauberFitHisto.Fill(nHits);
@@ -297,12 +333,7 @@ void Glauber::Fitter::SetGlauberFitHisto (float f, float mu, float k, float p, i
         fEcc5_VS_Multiplicity.Fill(nHits,fvEcc5.at(i));
         fPsi5_VS_Multiplicity.Fill(nHits,fvPsi5.at(i));
     }
-    if (Norm2Data)
-        NormalizeGlauberFit();
-
-    #ifndef __OMP_FOUND__
-        std::cout << "\t                                                                                                \r" << std::flush;
-    #endif
+    return true;
 }
 
 
@@ -635,8 +666,7 @@ std::unique_ptr<TH1F> Glauber::Fitter::GetModelHisto (const float range[2], TStr
 
     std::unique_ptr<TH1F> hModel(new TH1F ("hModel", "name", 100, fSimTree->GetMinimum(name),  fSimTree->GetMaximum(name)) );
     int plp_counter = 0, nentries = (int)(nEvents*(1.-p));
-    #ifdef __OMP_FOUND__
-        #pragma omp parallel for reduction(+ : plp_counter)
+    #ifdef __THREADS_ON__
     #endif
     for (int i=0; i<nentries; i++)
     {
@@ -667,6 +697,7 @@ std::unique_ptr<TH1F> Glauber::Fitter::GetModelHisto (const float range[2], TStr
             
     }
     
-    return std::move(hModel);
+    // return std::move(hModel);
+    return hModel;
     
 }
