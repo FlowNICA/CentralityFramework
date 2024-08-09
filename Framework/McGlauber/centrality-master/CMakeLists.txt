@@ -25,7 +25,7 @@ if (NOT DEFINED use_multithreading)
 endif()
 
 if (NOT DEFINED use_boost)
-        set(use_boost OFF)
+        set(use_boost ON)
 endif()
 if (use_boost STREQUAL ON)
         find_package(Boost COMPONENTS random)
@@ -67,16 +67,17 @@ include_directories(${CMAKE_SOURCE_DIR} ${ROOT_INCLUDE_DIRS})
 
 include(${ROOT_USE_FILE})
 
-if(use_multithreading)
-        add_definitions("-D__THREADS_ON__")
-        add_definitions(${OpenMP_CXX_FLAGS})
-        include_directories(${OpenMP_CXX_INCLUDE_DIRS})
-endif(use_multithreading)
-
 if(Boost_FOUND)
         add_definitions("-D__BOOST_FOUND__")
+        set(use_multithreading ON)
         include_directories(${Boost_INCLUDE_DIRS}) 
+else(Boost_FOUND)
+        set(use_multithreading OFF)
 endif()
+
+if(use_multithreading)
+        add_definitions("-D__THREADS_ON__")
+endif(use_multithreading)
 
 set(DICT_FILE_NAME G__${PROJECT_NAME})
 set(PCM_FILE_NAME lib${PROJECT_NAME})
