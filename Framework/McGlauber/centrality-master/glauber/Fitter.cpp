@@ -250,14 +250,40 @@ void Glauber::Fitter::SetGlauberFitHisto (float f, float mu, float k, float p, i
     #endif
     #ifdef __THREADS_ON__
         std::vector<std::thread> v_thr;
+        std::deque<std::atomic<int>> v_progress;
+
+        for (unsigned int i=0; i<fNthreads; ++i)
+            v_progress.emplace_back(0);
+
         for (unsigned int i=0; i<fNthreads; ++i){
             int n_part  = (int)(n/fNthreads);
             int i_start = i*n_part;
             int i_stop  = (int)((i+1)*n_part*(1.-p));
             int p_start = i_stop;
             int p_stop  = (i+1)*n_part;
-            v_thr.emplace_back([&]{Glauber::Fitter::BuildMultiplicity(f, mu, k, p, i_start, i_stop, p_start, p_stop, i_stop);});
+            v_thr.emplace_back([&]{Glauber::Fitter::BuildMultiplicity(f, mu, k, p, i_start, i_stop, p_start, p_stop, std::ref(v_progress[i]));});
         }
+
+        bool isOver = false;
+        int tot_progress, tot_denum;
+        while (not isOver){
+            isOver = true;
+            tot_progress = 0;
+            tot_denum = 0;
+            std::cout << "\tGlauber::Fitter::SetGlauberFitHisto: Constructing multiplicity, progress: ";
+            for (int j = 0; j < fNthreads; ++j){
+                if (v_progress[j].load() == 0) continue;
+                tot_progress += v_progress[j].load();
+                tot_denum++;
+            }
+            if (tot_denum>0) tot_progress /= tot_denum;
+            std::cout << tot_progress << "% \r" << std::flush;
+            if (tot_progress < 100)
+                isOver = false;
+            std::chrono::milliseconds dura(200);
+            std::this_thread::sleep_for(dura);
+        }
+
         for (auto &thread : v_thr)
             thread.join();
     #endif
@@ -269,7 +295,12 @@ void Glauber::Fitter::SetGlauberFitHisto (float f, float mu, float k, float p, i
     #endif
 }
 
+#ifndef __THREADS_ON__
 bool Glauber::Fitter::BuildMultiplicity(float f, float mu, float k, float p, int i_start, int i_stop, int plp_start, int plp_stop, int n)
+#endif
+#ifdef __THREADS_ON__
+bool Glauber::Fitter::BuildMultiplicity(float f, float mu, float k, float p, int i_start, int i_stop, int plp_start, int plp_stop, std::atomic<int> &_progress)
+#endif
 {
     #ifndef __BOOST_FOUND__
         SetNBDhist(mu,  k);
@@ -279,12 +310,18 @@ bool Glauber::Fitter::BuildMultiplicity(float f, float mu, float k, float p, int
         boost::mt19937 rngnum;
         boost::random::negative_binomial_distribution<int> nbd(k, (float)(k/(k+mu)));
     #endif
+    std::random_device rd;
+    std::mt19937 rnggen(rd());
+    std::uniform_real_distribution<float> unirnd(0.,1.);
     int plp_counter = plp_start;
     for (int i=i_start; i<i_stop; i++)
     {
         #ifndef __THREADS_ON__
             std::cout << "\tGlauber::Fitter::SetGlauberFitHisto: Constructing multiplicity, event [" << i 
                << "/" << n <<"]\r" << std::flush;
+        #endif
+        #ifdef __THREADS_ON__
+            _progress.store((i - i_start)*100/(i_stop - i_start)+1);
         #endif
         const int Na = int(Nancestors(f, fvNpart.at(i), fvNcoll.at(i)));
                 
@@ -295,7 +332,7 @@ bool Glauber::Fitter::BuildMultiplicity(float f, float mu, float k, float p, int
         #ifdef __BOOST_FOUND__
             for (int j=0; j<Na; j++) nHits += nbd(rngnum);
         #endif
-        if (p > 1e-10 && gRandom->Rndm() <= p){
+        if (p > 1e-10 && unirnd(rnggen) <= p){
             const int Na1 = int(Nancestors(f, fvNpart.at(plp_counter), fvNcoll.at(plp_counter)));
             for (int j = 0; j < Na1; j++)
             #ifndef __BOOST_FOUND__
@@ -666,6 +703,9 @@ std::unique_ptr<TH1F> Glauber::Fitter::GetModelHisto (const float range[2], TStr
 
     std::unique_ptr<TH1F> hModel(new TH1F ("hModel", "name", 100, fSimTree->GetMinimum(name),  fSimTree->GetMaximum(name)) );
     int plp_counter = 0, nentries = (int)(nEvents*(1.-p));
+    std::random_device rd;
+    std::mt19937 rnggen(rd());
+    std::uniform_real_distribution<float> unirnd(0.,1.);
     #ifdef __THREADS_ON__
     #endif
     for (int i=0; i<nentries; i++)
@@ -679,7 +719,7 @@ std::unique_ptr<TH1F> Glauber::Fitter::GetModelHisto (const float range[2], TStr
             for (int j=0; j<Na; j++) nHits += nbd(rngnum);
         #endif
 
-        if (p > 1e-10 && gRandom->Rndm() <= p){
+        if (p > 1e-10 && unirnd(rnggen) <= p){
             const int Na1 = int(Nancestors(f, fvNpart.at(nentries+plp_counter), fvNcoll.at(nentries+plp_counter)));
             for (int j = 0; j < Na1; j++)
             #ifndef __BOOST_FOUND__

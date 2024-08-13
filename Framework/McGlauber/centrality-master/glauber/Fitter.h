@@ -9,6 +9,7 @@
 #define GlauberFitter_H 1
 
 #include <vector>
+#include <random>
 #include "TString.h"
 #include "TNamed.h"
 #include "TH1F.h"
@@ -19,9 +20,10 @@
 #ifdef __THREADS_ON__
 #include <thread>
 #include <mutex>
+#include <atomic>
+#include <deque>
 #endif
 #ifdef __BOOST_FOUND__
-#include <random>
 #include <boost/random.hpp>
 #include <boost/math/distributions/negative_binomial.hpp>
 #endif
@@ -56,7 +58,12 @@ namespace Glauber
         float Nancestors(float f) const;
         float Nancestors(float f, float npart, float ncoll) const;
         float NancestorsMax(float f) const;
+        #ifndef __THREADS_ON__
         bool BuildMultiplicity(float f, float mu, float k, float p, int i_start, int i_stop, int plp_start, int plp_stop, int n);
+        #endif
+        #ifdef __THREADS_ON__
+        bool BuildMultiplicity(float f, float mu, float k, float p, int i_start, int i_stop, int plp_start, int plp_stop, std::atomic<int> &_progress);
+        #endif
         
         std::unique_ptr<TH1F> GetModelHisto (const Float_t range[2], TString name, const Float_t par[5], Int_t nEvents);
         
