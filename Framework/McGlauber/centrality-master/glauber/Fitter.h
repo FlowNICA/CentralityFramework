@@ -64,6 +64,12 @@ namespace Glauber
         #ifdef __THREADS_ON__
         bool BuildMultiplicity(float f, float mu, float k, float p, int i_start, int i_stop, int plp_start, int plp_stop, std::atomic<int> &_progress);
         #endif
+        #ifndef __THREADS_ON__
+        bool BuildModel(const float range[2], const float par[5], int i_start, int i_stop, int plp_start, int plp_stop, int n);
+        #endif
+        #ifdef __THREADS_ON__
+        bool BuildModel(const float range[2], const float par[5], int i_start, int i_stop, int plp_start, int plp_stop, std::atomic<int> &_progress);
+        #endif
         
         std::unique_ptr<TH1F> GetModelHisto (const Float_t range[2], TString name, const Float_t par[5], Int_t nEvents);
         
@@ -231,6 +237,9 @@ namespace Glauber
         std::vector<float> fvPsi4{};
         std::vector<float> fvEcc5{};
         std::vector<float> fvPsi5{};
+
+        std::vector<float> fvModel{};
+        std::vector<float> fvModelInput{};
 
         Float_t fMaxValue{-1.};
         

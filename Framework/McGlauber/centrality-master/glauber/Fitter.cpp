@@ -290,9 +290,7 @@ void Glauber::Fitter::SetGlauberFitHisto (float f, float mu, float k, float p, i
     if (Norm2Data)
         NormalizeGlauberFit();
 
-    #ifndef __THREADS_ON__
-        std::cout << "\t                                                                                                \r" << std::flush;
-    #endif
+    std::cout << "\t                                                                                                \r" << std::flush;
 }
 
 #ifndef __THREADS_ON__
@@ -681,63 +679,140 @@ float Glauber::Fitter::NBD(float n, float mu, float k) const
  * @return pointer to the histogram 
  */
 std::unique_ptr<TH1F> Glauber::Fitter::GetModelHisto (const float range[2], TString name, const float par[5], int nEvents)
-{    
+{
+    fvModelInput.clear();
+
+    const float p = par[4];
+
+    float modelpar{-999.};
+    fSimTree->SetBranchAddress(name, &modelpar);
+    for (int i=0; i<nEvents; ++i){
+        fSimTree->GetEntry(i);
+        fvModelInput.push_back(modelpar);
+    }
+
+    std::unique_ptr<TH1F> hModel(new TH1F ("hModel", "name", 100, fSimTree->GetMinimum(name),  fSimTree->GetMaximum(name)) );
+
+    int nentries = (int)(nEvents*(1.-p));
+    int plp_counter=nentries;
+    #ifndef __THREADS_ON__
+        BuildModel(range, par, 0, nentries, plp_counter, nEvents, nentries);
+    #endif
+    #ifdef __THREADS_ON__
+        std::vector<std::thread> v_thr;
+        std::deque<std::atomic<int>> v_progress;
+
+        for (unsigned int i=0; i<fNthreads; ++i)
+            v_progress.emplace_back(0);
+
+        for (unsigned int i=0; i<fNthreads; ++i){
+            int n_part  = (int)(nEvents/fNthreads);
+            int i_start = i*n_part;
+            int i_stop  = (int)((i+1)*n_part*(1.-p));
+            int p_start = i_stop;
+            int p_stop  = (i+1)*n_part;
+            v_thr.emplace_back([&]{Glauber::Fitter::BuildModel(range, par, i_start, i_stop, p_start, p_stop, std::ref(v_progress[i]));});
+        }
+
+        bool isOver = false;
+        int tot_progress, tot_denum;
+        while (not isOver){
+            isOver = true;
+            tot_progress = 0;
+            tot_denum = 0;
+            std::cout << "\tGlauber::Fitter::GetModelHisto: Constructing multiplicity, progress: ";
+            for (int j = 0; j < fNthreads; ++j){
+                if (v_progress[j].load() == 0) continue;
+                tot_progress += v_progress[j].load();
+                tot_denum++;
+            }
+            if (tot_denum>0) tot_progress /= tot_denum;
+            std::cout << tot_progress << "% \r" << std::flush;
+            if (tot_progress < 100)
+                isOver = false;
+            std::chrono::milliseconds dura(200);
+            std::this_thread::sleep_for(dura);
+        }
+
+        for (auto &thread : v_thr)
+            thread.join();
+    #endif
+
+    for (auto &mult : fvModel){
+        hModel->Fill(mult);
+    }
+    std::cout << "\t                                                                                                \r" << std::flush;
+
+    fvModel.clear();
+    fvModelInput.clear();
+    
+    // return std::move(hModel);
+    return hModel;
+    
+}
+
+
+#ifndef __THREADS_ON__
+bool Glauber::Fitter::BuildModel(const float range[2], const float par[5], int i_start, int i_stop, int plp_start, int plp_stop, int n)
+#endif
+#ifdef __THREADS_ON__
+bool Glauber::Fitter::BuildModel(const float range[2], const float par[5], int i_start, int i_stop, int plp_start, int plp_stop, std::atomic<int> &_progress)
+#endif
+{
     const float f =  par[0];
     const float mu = par[1];
     const float k = par[2];
     const float p = par[4];
-    
-    float modelpar{-999.};
-    fSimTree->SetBranchAddress(name, &modelpar);
-        
+
+    fvModel.clear();
+
     #ifndef __BOOST_FOUND__
         SetNBDhist(mu,  k);
+        std::unique_ptr<TH1F> htemp {(TH1F*)fNbdHisto.Clone("htemp")}; // WTF??? Not working without pointer
     #endif
     #ifdef __BOOST_FOUND__
         boost::mt19937 rngnum;
         boost::random::negative_binomial_distribution<int> nbd(k, (float)(k/(k+mu)));
     #endif
-  
-//     TRandom random;  
-//     random.SetSeed(mu*k);
-
-    std::unique_ptr<TH1F> hModel(new TH1F ("hModel", "name", 100, fSimTree->GetMinimum(name),  fSimTree->GetMaximum(name)) );
-    int plp_counter = 0, nentries = (int)(nEvents*(1.-p));
     std::random_device rd;
     std::mt19937 rnggen(rd());
     std::uniform_real_distribution<float> unirnd(0.,1.);
-    #ifdef __THREADS_ON__
-    #endif
-    for (int i=0; i<nentries; i++)
+    int plp_counter = plp_start;
+    for (int i=i_start; i<i_stop; i++)
     {
+        #ifndef __THREADS_ON__
+            std::cout << "\tGlauber::Fitter::BuildModel: Constructing multiplicity, event [" << i 
+               << "/" << n <<"]\r" << std::flush;
+        #endif
+        #ifdef __THREADS_ON__
+            _progress.store((i - i_start)*100/(i_stop - i_start)+1);
+        #endif
         const int Na = int(Nancestors(f, fvNpart.at(i), fvNcoll.at(i)));
-        float nHits{0.};
+                
+        float nHits {0.};
         #ifndef __BOOST_FOUND__
-            for (int j=0; j<Na; ++j) nHits += (int)fNbdHisto.GetRandom();
+            for (int j=0; j<Na; j++) nHits += int(htemp->GetRandom());
         #endif
         #ifdef __BOOST_FOUND__
             for (int j=0; j<Na; j++) nHits += nbd(rngnum);
         #endif
-
         if (p > 1e-10 && unirnd(rnggen) <= p){
-            const int Na1 = int(Nancestors(f, fvNpart.at(nentries+plp_counter), fvNcoll.at(nentries+plp_counter)));
+            const int Na1 = int(Nancestors(f, fvNpart.at(plp_counter), fvNcoll.at(plp_counter)));
             for (int j = 0; j < Na1; j++)
             #ifndef __BOOST_FOUND__
-                nHits += int(fNbdHisto.GetRandom());
+                nHits += int(htemp->GetRandom());
             #endif
             #ifdef __BOOST_FOUND__
-                nHits += nbd(rngnum);
+                nHits += (int)nbd(rngnum);
             #endif
             plp_counter++;
         }
-        
         if ( nHits > range[0] && nHits < range[1] ){
-            hModel->Fill(modelpar);
+            #ifdef __THREADS_ON__
+                std::lock_guard<std::mutex> guard(fMtx);
+            #endif
+            fvModel.push_back(fvModelInput.at(i));
         }
-            
     }
-    
-    // return std::move(hModel);
-    return hModel;
-    
+    return true;
 }
