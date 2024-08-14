@@ -70,6 +70,11 @@ namespace Glauber
         #ifdef __THREADS_ON__
         bool BuildModel(const float range[2], const float par[5], int i_start, int i_stop, int plp_start, int plp_stop, std::atomic<int> &_progress);
         #endif
+
+        #ifdef __THREADS_ON__
+        void SetNthreads(unsigned int n){ fNthreads = n; }
+        unsigned int GetNthreads() const { return fNthreads; }
+        #endif
         
         std::unique_ptr<TH1F> GetModelHisto (const Float_t range[2], TString name, const Float_t par[5], Int_t nEvents);
         
