@@ -270,7 +270,8 @@ void Glauber::Fitter::SetGlauberFitHisto (float f, float mu, float k, float p, i
             isOver = true;
             tot_progress = 0;
             tot_denum = 0;
-            std::cout << "\tGlauber::Fitter::SetGlauberFitHisto: Constructing multiplicity, progress: ";
+            if (fFirstIteration) std::cout << "\tGlauber::Fitter::SetGlauberFitHisto: Initialization, progress: ";
+            else std::cout << "\tGlauber::Fitter::SetGlauberFitHisto: Constructing multiplicity, progress: ";
             for (int j = 0; j < fNthreads; ++j){
                 if (v_progress[j].load() == 0) continue;
                 tot_progress += v_progress[j].load();
@@ -300,17 +301,11 @@ bool Glauber::Fitter::BuildMultiplicity(float f, float mu, float k, float p, int
 bool Glauber::Fitter::BuildMultiplicity(float f, float mu, float k, float p, int i_start, int i_stop, int plp_start, int plp_stop, std::atomic<int> &_progress)
 #endif
 {
-    #ifndef __BOOST_FOUND__
-        SetNBDhist(mu,  k);
-        std::unique_ptr<TH1F> htemp {(TH1F*)fNbdHisto.Clone("htemp")}; // WTF??? Not working without pointer
-    #endif
-    #ifdef __BOOST_FOUND__
-        boost::mt19937 rngnum;
-        boost::random::negative_binomial_distribution<int> nbd(k, (float)(k/(k+mu)));
-    #endif
     std::random_device rd;
-    std::mt19937 rnggen(rd());
+    std::mt19937 rngnum(rd());
     std::uniform_real_distribution<float> unirnd(0.,1.);
+    std::negative_binomial_distribution<> nbddist(k, (float)(k/(k+mu)));
+    std::gamma_distribution<> gammadist((float)((mu * k) / (mu + k)), (float)((k + mu) / k));
     int plp_counter = plp_start;
     for (int i=i_start; i<i_stop; i++)
     {
@@ -324,21 +319,16 @@ bool Glauber::Fitter::BuildMultiplicity(float f, float mu, float k, float p, int
         const int Na = int(Nancestors(f, fvNpart.at(i), fvNcoll.at(i)));
                 
         float nHits {0.}, nPlp {0.};
-        #ifndef __BOOST_FOUND__
-            for (int j=0; j<Na; j++) nHits += int(htemp->GetRandom());
-        #endif
-        #ifdef __BOOST_FOUND__
-            for (int j=0; j<Na; j++) nHits += nbd(rngnum);
-        #endif
-        if (p > 1e-10 && unirnd(rnggen) <= p){
+        if (fUseNbd)
+            for (int j=0; j<Na; j++) nHits += nbddist(rngnum);
+        else
+            for (int j=0; j<Na; j++) nHits += gammadist(rngnum);
+        if (p > 1e-10 && unirnd(rngnum) <= p){
             const int Na1 = int(Nancestors(f, fvNpart.at(plp_counter), fvNcoll.at(plp_counter)));
-            for (int j = 0; j < Na1; j++)
-            #ifndef __BOOST_FOUND__
-                nPlp += int(htemp->GetRandom());
-            #endif
-            #ifdef __BOOST_FOUND__
-                nPlp += (int)nbd(rngnum);
-            #endif
+            if (fUseNbd)
+                for (int j = 0; j < Na1; j++) nPlp += nbddist(rngnum);
+            else
+                for (int j = 0; j < Na1; j++) nPlp += gammadist(rngnum);
             plp_counter++;
             #ifdef __THREADS_ON__
                 std::lock_guard<std::mutex> guard(fMtx);
@@ -409,14 +399,15 @@ void Glauber::Fitter::NormalizeGlauberFit ()
  */
 void Glauber::Fitter::FindMuGoldenSection (float *mu, float *chi2, float*chi2_error, float mu_min, float mu_max, float f, float k, float p, int nEvents, int nIter, int n)
 {
-    const float phi {(float)((1+TMath::Sqrt(5))/2)};
+    const float phi = (float)((1+TMath::Sqrt(5))/2);
 
     /* left */
     float mu_1 = mu_max - (mu_max-mu_min)/phi;
 
     /* right */
     float mu_2 = mu_min + (mu_max-mu_min)/phi;
-    
+    fFirstIteration = true;
+
     SetGlauberFitHisto (f, mu_1, k, p, nEvents);
     float chi2_mu1 = GetChi2 ();
     float chi2_mu1_error = GetChi2Error ();
@@ -425,9 +416,10 @@ void Glauber::Fitter::FindMuGoldenSection (float *mu, float *chi2, float*chi2_er
     float chi2_mu2 = GetChi2 ();
     float chi2_mu2_error = GetChi2Error ();
     
+    fFirstIteration = false;
     for (int j=0; j<nIter; j++)
     {        
-        if (chi2_mu1 > chi2_mu2)
+        if (chi2_mu1 >= chi2_mu2)
         {
             mu_min = mu_1;
             mu_1 = mu_2;
@@ -435,7 +427,7 @@ void Glauber::Fitter::FindMuGoldenSection (float *mu, float *chi2, float*chi2_er
             chi2_mu1 = chi2_mu2;
             SetGlauberFitHisto (f, mu_2, k, p, nEvents);
             chi2_mu2 = GetChi2 ();
-	    chi2_mu2_error = GetChi2Error ();
+	        chi2_mu2_error = GetChi2Error ();
         }
         else
         {
@@ -445,7 +437,7 @@ void Glauber::Fitter::FindMuGoldenSection (float *mu, float *chi2, float*chi2_er
             chi2_mu2 = chi2_mu1;
             SetGlauberFitHisto (f, mu_1, k, p, nEvents);
             chi2_mu1 = GetChi2 (); 
-  	    chi2_mu1_error = GetChi2Error ();           
+  	        chi2_mu1_error = GetChi2Error ();           
         }
         
         std::cout << "n = " << n+j << " f = "  << f << " k = " << k << " p = "  << p << " mu1 = " << mu_1 << " mu2 = " << mu_2 << " chi2_mu1 = " << chi2_mu1  << " chi2_mu2 = " << chi2_mu2 << std::endl;
@@ -469,7 +461,7 @@ void Glauber::Fitter::FindMuGoldenSection (float *mu, float *chi2, float*chi2_er
  * @param k1 upper search edge for NBD parameter
  * @param nEvents
  */
-float Glauber::Fitter::FitGlauber (float *par, Float_t f0, Float_t f1, Int_t k0, Int_t k1, Float_t p0, Float_t p1, Int_t nEvents)
+float Glauber::Fitter::FitGlauber (float *par, Float_t f0, Float_t f1, Float_t k0, Float_t k1, Float_t p0, Float_t p1, Int_t nEvents)
 {
     float f_fit{-1};
     float mu_fit{-1}; 
@@ -478,7 +470,7 @@ float Glauber::Fitter::FitGlauber (float *par, Float_t f0, Float_t f1, Int_t k0,
     float Chi2Min {1e10};
     float Chi2Min_error {0};
 
-    const TString filename = Form ( "%s/fit_%4.2f_%d_%d_%4.2f_%d.root", fOutDirName.Data(), f0, k0, k1, p0, fFitMinBin );
+    const TString filename = Form ( "%s/fit_%4.2f_%4.2f_%4.2f_%4.2f_%d.root", fOutDirName.Data(), f0, k0, k1, p0, fFitMinBin );
     
 //     std::unique_ptr<TFile> file {TFile::Open(filename, "recreate")};    
 //     std::unique_ptr<TTree> tree {new TTree("test_tree", "tree" )};
@@ -500,7 +492,7 @@ float Glauber::Fitter::FitGlauber (float *par, Float_t f0, Float_t f1, Int_t k0,
     for (float i=f0; i<=f1; i=i+fFstep)
     {
 	    f=i;
-	    for (float j=k0; j<=k1; j=j+(float)fKstep)
+	    for (float j=k0; j<=k1; j=j+fKstep)
 	    {
             k = j;
             for (float h=p0; h<=p1; h=h+fPstep)
@@ -766,17 +758,11 @@ bool Glauber::Fitter::BuildModel(const float range[2], const float par[5], int i
 
     fvModel.clear();
 
-    #ifndef __BOOST_FOUND__
-        SetNBDhist(mu,  k);
-        std::unique_ptr<TH1F> htemp {(TH1F*)fNbdHisto.Clone("htemp")}; // WTF??? Not working without pointer
-    #endif
-    #ifdef __BOOST_FOUND__
-        boost::mt19937 rngnum;
-        boost::random::negative_binomial_distribution<int> nbd(k, (float)(k/(k+mu)));
-    #endif
     std::random_device rd;
-    std::mt19937 rnggen(rd());
+    std::mt19937 rngnum(rd());
     std::uniform_real_distribution<float> unirnd(0.,1.);
+    std::negative_binomial_distribution<> nbddist(k, (float)(k/(k+mu)));
+    std::gamma_distribution<> gammadist((float)((mu * k) / (mu + k)), (float)((k + mu) / k));
     int plp_counter = plp_start;
     for (int i=i_start; i<i_stop; i++)
     {
@@ -790,21 +776,16 @@ bool Glauber::Fitter::BuildModel(const float range[2], const float par[5], int i
         const int Na = int(Nancestors(f, fvNpart.at(i), fvNcoll.at(i)));
                 
         float nHits {0.};
-        #ifndef __BOOST_FOUND__
-            for (int j=0; j<Na; j++) nHits += int(htemp->GetRandom());
-        #endif
-        #ifdef __BOOST_FOUND__
-            for (int j=0; j<Na; j++) nHits += nbd(rngnum);
-        #endif
-        if (p > 1e-10 && unirnd(rnggen) <= p){
+        if (fUseNbd)
+            for (int j=0; j<Na; j++) nHits += nbddist(rngnum);
+        else
+            for (int j=0; j<Na; j++) nHits += gammadist(rngnum);
+        if (p > 1e-10 && unirnd(rngnum) <= p){
             const int Na1 = int(Nancestors(f, fvNpart.at(plp_counter), fvNcoll.at(plp_counter)));
-            for (int j = 0; j < Na1; j++)
-            #ifndef __BOOST_FOUND__
-                nHits += int(htemp->GetRandom());
-            #endif
-            #ifdef __BOOST_FOUND__
-                nHits += (int)nbd(rngnum);
-            #endif
+            if (fUseNbd)
+                for (int j = 0; j < Na1; j++) nHits += nbddist(rngnum);
+            else
+                for (int j = 0; j < Na1; j++) nHits += gammadist(rngnum);
             plp_counter++;
         }
         if ( nHits > range[0] && nHits < range[1] ){

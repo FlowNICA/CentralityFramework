@@ -26,8 +26,8 @@ int main(int argc, char *argv[])
 
 		Float_t f0, f1, f_step;
 		Float_t p0, p1, p_step;
-    Int_t   k0, k1, n_iter, k_step;
-    Int_t   min_bin, max_bin;
+    Float_t   k0, k1, k_step;
+    Int_t   min_bin, max_bin, n_iter;
     std::string input_glauber_file;
     std::string input_glauber_treename;
     std::string input_refmult_file;
@@ -168,6 +168,8 @@ int main(int argc, char *argv[])
     fitter.SetFstepSize(f_step);
     fitter.SetKstepSize(k_step);
     fitter.SetPstepSize(p_step);
+
+    fitter.UseGamma();
 
     float par[5];
 //    const float chi2 = fitter.FitGlauber(par, f0, f1, k0, k1, p0, p1, nevents);

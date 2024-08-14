@@ -21,14 +21,7 @@ if (CMAKE_BUILD_TYPE MATCHES DEBUG)
 endif ()
 
 if (NOT DEFINED use_multithreading)
-        set(use_multithreading OFF)
-endif()
-
-if (NOT DEFINED use_boost)
-        set(use_boost ON)
-endif()
-if (use_boost STREQUAL ON)
-        find_package(Boost COMPONENTS random)
+        set(use_multithreading ON)
 endif()
 
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -ggdb -DDEBUG -D__DEBUG -Wall")
@@ -67,14 +60,6 @@ include_directories(${CMAKE_SOURCE_DIR} ${ROOT_INCLUDE_DIRS})
 
 include(${ROOT_USE_FILE})
 
-if(Boost_FOUND)
-        add_definitions("-D__BOOST_FOUND__")
-        set(use_multithreading ON)
-        include_directories(${Boost_INCLUDE_DIRS}) 
-else(Boost_FOUND)
-        set(use_multithreading OFF)
-endif()
-
 if(use_multithreading)
         add_definitions("-D__THREADS_ON__")
 endif(use_multithreading)
@@ -84,28 +69,15 @@ set(PCM_FILE_NAME lib${PROJECT_NAME})
 
 ROOT_GENERATE_DICTIONARY(${DICT_FILE_NAME} ${HEADERS} LINKDEF src/CentralityLinkDef.h)
 add_library(Centrality SHARED ${SOURCES} ${DICT_FILE_NAME})
-if(Boost_FOUND)
-        target_link_libraries(Centrality ${ROOT_LIBRARIES} ${Boost_LIBRARIES})
-else()
-        target_link_libraries(Centrality ${ROOT_LIBRARIES} ${Boost_LIBRARIES})
-endif(Boost_FOUND)
+target_link_libraries(Centrality ${ROOT_LIBRARIES})
 
 # Create a main program using the library
 add_executable(main main.cpp)
-if(Boost_FOUND)
-        target_link_libraries(main Centrality ${ROOT_LIBRARIES} ${Boost_LIBRARIES})
-else()
-        target_link_libraries(main Centrality ${ROOT_LIBRARIES})
-endif(Boost_FOUND)
+target_link_libraries(main Centrality ${ROOT_LIBRARIES})
 target_include_directories(main PUBLIC src)
 
 add_executable(glauber glauber/main.cpp)
-if(Boost_FOUND)
-        target_link_libraries(glauber ${ROOT_LIBRARIES} ${Boost_LIBRARIES} Centrality)
-else()
-        target_link_libraries(glauber ${ROOT_LIBRARIES} Centrality)
-endif(Boost_FOUND)
-
+target_link_libraries(glauber ${ROOT_LIBRARIES} Centrality)
 
 # install(FILES ${HEADERS} DESTINATION include)
 # install(TARGETS Centrality DESTINATION lib)
