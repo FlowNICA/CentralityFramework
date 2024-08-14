@@ -540,6 +540,8 @@ float Glauber::Fitter::FitGlauber (float *par, Float_t f0, Float_t f1, Float_t k
 	    } 
     }
 
+    SetNBDhist(mu_fit, k_fit);
+
     tree->Write();
     file->Write();
     file->Close();
@@ -621,13 +623,18 @@ void Glauber::Fitter::SetNBDhist(float mu, float k)
     const int nBins = (mu+1.)*3 < 10 ? 10 : (mu+1.)*3;
     
     fNbdHisto = TH1F ("fNbdHisto", "", nBins, 0, nBins);
-    fNbdHisto.SetName("nbd");
+    if (fUseNbd) fNbdHisto.SetName("nbd");
+    else fNbdHisto.SetName("gamma");
     
-    for (int i=0; i<nBins; ++i) 
-    {
-        const float val = NBD(i, mu, k);
-        if (val>1e-10) fNbdHisto.SetBinContent(i+1, val);
-//         std::cout << "val " << val << std::endl;    
+    std::random_device rd;
+    std::mt19937 rngnum(rd());
+    std::uniform_real_distribution<float> unirnd(0.,1.);
+    std::negative_binomial_distribution<> nbddist(k, (float)(k/(k+mu)));
+    std::gamma_distribution<> gammadist((float)((mu * k) / (mu + k)), (float)((k + mu) / k));
+
+    for (int i=0; i<1e5; ++i){
+        if (fUseNbd) fNbdHisto.Fill(nbddist(rngnum));
+        else fNbdHisto.Fill(gammadist(rngnum));
     }
 }
 
