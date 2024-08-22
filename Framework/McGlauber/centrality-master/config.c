@@ -29,6 +29,9 @@ void config()
   int multMin = 30;
   int multMax = 130;
 
+  // Set up bin size in the data histogram
+  int bin_size = 1;
+
   // Set up mode for number of ancestors calculation
   ///****************************************
   ///  |   mode    |   function for Na      |
@@ -49,13 +52,13 @@ void config()
   std::unique_ptr<TFile> data_file{ TFile::Open(inFileDataName.c_str(), "read")};
   std::unique_ptr<TH1F>  data_hist{ (TH1F*) data_file->Get(inHistDataName.c_str())};
 
-  const Int_t nevents = 10*(int(data_hist->Integral(multMin,multMax)));
+  const int nevents = 10*(int(data_hist->Integral(multMin,multMax)));
 
   Glauber::Fitter fitter ( std::move(glauber_tree));
   fitter.SetMode(mode.c_str());
   fitter.SetMassNumber(f_min/2);
   fitter.SetInputHisto(*data_hist);
-  fitter.SetBinSize(1);
+  fitter.SetBinSize(bin_size);
   fitter.Init(nevents, mode.c_str());
   
   fitter.SetFitMinBin(multMin);
