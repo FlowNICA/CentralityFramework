@@ -72,15 +72,20 @@ void config()
   fitter.SetNthreads(n_thr);
   fitter.UseGamma();
 
-  float par[5];
   float chi2=1e10;
-  chi2 = fitter.FitGlauber(par, f_min, f_max, k_min, k_max, p_min, p_max, nevents);
+  chi2 = fitter.FitGlauber(f_min, f_max, k_min, k_max, p_min, p_max, nevents);
 
-  std::cout << "f = " << par[0] << "    mu = " << par[1] << "    k = " << par[2] << "    p = " << par[4] << "    chi2 = " << chi2 << "    chi2_error = " << par[3] << std::endl; 
+  float f_fit    = fitter.GetOptimalF();
+  float k_fit    = fitter.GetOptimalK();
+  float mu_fit   = fitter.GetOptimalMu();
+  float p_fit    = fitter.GetOptimalP();
+  float chi2_err = fitter.GetOptimalChi2Error();
+
+  std::cout << "f = " << f_fit << "    mu = " << mu_fit << "    k = " << k_fit << "    p = " << p_fit << "    chi2 = " << chi2 << "    chi2_error = " << chi2_err << std::endl; 
   
-  DrawHistos(fitter, par, chi2, true, true, true, true);
+  DrawHistos(fitter, true, true, true, true);
 
   const float range[2] = {(float)multMin, (float)multMax};
-  std::unique_ptr<TH1F> hB(fitter.GetModelHisto (range, "B", par, 100000));
+  std::unique_ptr<TH1F> hB(fitter.GetModelHisto (range, "B", 100000));
   hB->SaveAs( "b_test.root" );
 }

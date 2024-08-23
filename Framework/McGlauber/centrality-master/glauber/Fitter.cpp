@@ -496,7 +496,7 @@ void Glauber::Fitter::FindMuGoldenSection(float *mu, float *chi2, float *chi2_er
  * @param k1 upper search edge for NBD parameter
  * @param nEvents
  */
-float Glauber::Fitter::FitGlauber(float *par, Float_t f0, Float_t f1, Float_t k0, Float_t k1, Float_t p0, Float_t p1, Int_t nEvents)
+float Glauber::Fitter::FitGlauber(Float_t f0, Float_t f1, Float_t k0, Float_t k1, Float_t p0, Float_t p1, Int_t nEvents)
 {
     float f_fit{-1};
     float mu_fit{-1};
@@ -582,11 +582,12 @@ float Glauber::Fitter::FitGlauber(float *par, Float_t f0, Float_t f1, Float_t k0
     file->Write();
     file->Close();
 
-    par[0] = f_fit;
-    par[1] = mu_fit;
-    par[2] = k_fit;
-    par[3] = Chi2Min_error;
-    par[4] = p_fit;
+    fOptimalF = f_fit;
+    fOptimalK = k_fit;
+    fOptimalMu = mu_fit;
+    fOptimalP = p_fit;
+    fOptimalChi2Ndf = Chi2Min;
+    fOptimalChi2NdfError = Chi2Min_error;
 
     return Chi2Min;
 }
@@ -720,11 +721,11 @@ float Glauber::Fitter::NBD(float n, float mu, float k) const
  * @param Nevents
  * @return pointer to the histogram
  */
-std::unique_ptr<TH1F> Glauber::Fitter::GetModelHisto(const float range[2], TString name, const float par[5], int nEvents)
+std::unique_ptr<TH1F> Glauber::Fitter::GetModelHisto(const float range[2], TString name, int nEvents)
 {
     fvModelInput.clear();
 
-    const float p = par[4];
+    const float p = fOptimalP;
 
     float modelpar{-999.};
     fSimTree->SetBranchAddress(name, &modelpar);
@@ -756,7 +757,7 @@ std::unique_ptr<TH1F> Glauber::Fitter::GetModelHisto(const float range[2], TStri
         int p_start = i_stop;
         int p_stop = (i + 1) * n_part;
         v_thr.emplace_back([&]
-                           { Glauber::Fitter::BuildModel(range, par, i_start, i_stop, p_start, p_stop, std::ref(v_progress[i])); });
+                           { Glauber::Fitter::BuildModel(range, i_start, i_stop, p_start, p_stop, std::ref(v_progress[i])); });
     }
 
     bool isOver = false;
@@ -801,16 +802,16 @@ std::unique_ptr<TH1F> Glauber::Fitter::GetModelHisto(const float range[2], TStri
 }
 
 #ifndef __THREADS_ON__
-bool Glauber::Fitter::BuildModel(const float range[2], const float par[5], int i_start, int i_stop, int plp_start, int plp_stop, int n)
+bool Glauber::Fitter::BuildModel(const float range[2], int i_start, int i_stop, int plp_start, int plp_stop, int n)
 #endif
 #ifdef __THREADS_ON__
-    bool Glauber::Fitter::BuildModel(const float range[2], const float par[5], int i_start, int i_stop, int plp_start, int plp_stop, std::atomic<int> &_progress)
+    bool Glauber::Fitter::BuildModel(const float range[2], int i_start, int i_stop, int plp_start, int plp_stop, std::atomic<int> &_progress)
 #endif
 {
-    const float f = par[0];
-    const float mu = par[1];
-    const float k = par[2];
-    const float p = par[4];
+    const float f = fOptimalF;
+    const float mu = fOptimalMu;
+    const float k = fOptimalK;
+    const float p = fOptimalP;
 
     fvModel.clear();
 

@@ -41,7 +41,7 @@ namespace Glauber
         void NormalizeGlauberFit();
         void DrawHistos(Bool_t isSim = true, Bool_t isData = true, Bool_t isGlauber = false, Bool_t isNBD = false);
 
-        float FitGlauber(float *par, Float_t f0, Float_t f1, Float_t k0, Float_t k1, Float_t p0, Float_t p1, Int_t nEvents);
+        float FitGlauber(Float_t f0, Float_t f1, Float_t k0, Float_t k1, Float_t p0, Float_t p1, Int_t nEvents);
         void FindMuGoldenSection(Float_t *mu, Float_t *chi2, float *chi2_error, Float_t mu_min, Float_t mu_max, Float_t f, Float_t k, Float_t p, Int_t nEvents = 10000, Int_t nIter = 5, int n = 0);
 
         Float_t GetChi2(void) const;
@@ -60,10 +60,10 @@ namespace Glauber
         bool BuildMultiplicity(float f, float mu, float k, float p, int i_start, int i_stop, int plp_start, int plp_stop, std::atomic<int> &_progress);
 #endif
 #ifndef __THREADS_ON__
-        bool BuildModel(const float range[2], const float par[5], int i_start, int i_stop, int plp_start, int plp_stop, int n);
+        bool BuildModel(const float range[2], int i_start, int i_stop, int plp_start, int plp_stop, int n);
 #endif
 #ifdef __THREADS_ON__
-        bool BuildModel(const float range[2], const float par[5], int i_start, int i_stop, int plp_start, int plp_stop, std::atomic<int> &_progress);
+        bool BuildModel(const float range[2], int i_start, int i_stop, int plp_start, int plp_stop, std::atomic<int> &_progress);
 #endif
 
 #ifdef __THREADS_ON__
@@ -74,7 +74,7 @@ namespace Glauber
         void UseGamma() { fUseNbd = false; }
         void UseNbd() { fUseNbd = true; }
 
-        std::unique_ptr<TH1F> GetModelHisto(const Float_t range[2], TString name, const Float_t par[5], Int_t nEvents);
+        std::unique_ptr<TH1F> GetModelHisto(const Float_t range[2], TString name, Int_t nEvents);
 
         //
         //         Setters
@@ -146,6 +146,13 @@ namespace Glauber
         TH2F GetBestPsi4_VS_Multiplicity() const { return fBestPsi4_VS_Multiplicity; }
         TH2F GetBestEcc5_VS_Multiplicity() const { return fBestEcc5_VS_Multiplicity; }
         TH2F GetBestPsi5_VS_Multiplicity() const { return fBestPsi5_VS_Multiplicity; }
+
+        float GetOptimalF() const { return fOptimalF; }
+        float GetOptimalK() const { return fOptimalK; }
+        float GetOptimalMu() const { return fOptimalMu; }
+        float GetOptimalP() const { return fOptimalP; }
+        float GetOptimalChi2() const { return fOptimalChi2Ndf; }
+        float GetOptimalChi2Error() const { return fOptimalChi2NdfError; }
 
     private:
         /**   Data members  **/
@@ -254,6 +261,13 @@ namespace Glauber
         TString fMode{"Default"};
 
         TString fOutDirName{""};
+
+        float fOptimalF{0.};
+        float fOptimalK{0.};
+        float fOptimalMu{0.};
+        float fOptimalP{0.};
+        float fOptimalChi2Ndf{0.};
+        float fOptimalChi2NdfError{0.};
 
         bool fUseNbd{false};
         bool fFirstIteration{false};
