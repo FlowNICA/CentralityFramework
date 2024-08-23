@@ -37,6 +37,36 @@ ClassImp(Glauber::Fitter)
     fSimTree->SetBranchAddress("Psi5", &fPsi5);
 }
 
+#ifdef __THREADS_ON__
+Glauber::Fitter::Fitter(std::unique_ptr<TTree> tree, unsigned int Nthreads)
+{
+    fNthreads = Nthreads;
+
+    fSimTree = std::move(tree);
+    std::cout << fSimTree->GetEntries() << std::endl;
+
+    if (!fSimTree)
+    {
+        std::cout << "SetSimHistos: *** Error - " << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    fSimTree->SetBranchAddress("B", &fB);
+    fSimTree->SetBranchAddress("Npart", &fNpart);
+    fSimTree->SetBranchAddress("Ncoll", &fNcoll);
+    fSimTree->SetBranchAddress("Ecc1", &fEcc1);
+    fSimTree->SetBranchAddress("Psi1", &fPsi1);
+    fSimTree->SetBranchAddress("Ecc2", &fEcc2);
+    fSimTree->SetBranchAddress("Psi2", &fPsi2);
+    fSimTree->SetBranchAddress("Ecc3", &fEcc3);
+    fSimTree->SetBranchAddress("Psi3", &fPsi3);
+    fSimTree->SetBranchAddress("Ecc4", &fEcc4);
+    fSimTree->SetBranchAddress("Psi4", &fPsi4);
+    fSimTree->SetBranchAddress("Ecc5", &fEcc5);
+    fSimTree->SetBranchAddress("Psi5", &fPsi5);
+}
+#endif
+
 void Glauber::Fitter::Init(int nEntries, TString fmode)
 {
 
@@ -740,7 +770,7 @@ std::unique_ptr<TH1F> Glauber::Fitter::GetModelHisto(const float range[2], TStri
     int nentries = (int)(nEvents * (1. - p));
     int plp_counter = nentries;
 #ifndef __THREADS_ON__
-    BuildModel(range, par, 0, nentries, plp_counter, nEvents, nentries);
+    BuildModel(range, 0, nentries, plp_counter, nEvents, nentries);
 #endif
 #ifdef __THREADS_ON__
     std::vector<std::thread> v_thr;

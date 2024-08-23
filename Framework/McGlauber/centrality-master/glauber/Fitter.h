@@ -33,6 +33,9 @@ namespace Glauber
         /**   Default constructor   **/
         Fitter() {};
         Fitter(std::unique_ptr<TTree> tree);
+#ifdef __THREADS_ON__
+        Fitter(std::unique_ptr<TTree> tree, unsigned int Nthreads);
+#endif
         /**   Destructor   **/
         virtual ~Fitter() {};
 

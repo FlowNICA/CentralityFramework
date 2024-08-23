@@ -54,7 +54,8 @@ void config()
 
   const int nevents = 10*(int(data_hist->Integral(multMin,multMax)));
 
-  Glauber::Fitter fitter ( std::move(glauber_tree));
+  // Glauber::Fitter fitter ( std::move(glauber_tree), n_thr ); // in case of multithreading
+  Glauber::Fitter fitter ( std::move(glauber_tree)); // without multithreading
   fitter.SetMode(mode.c_str());
   fitter.SetMassNumber(f_min/2);
   fitter.SetInputHisto(*data_hist);
@@ -69,7 +70,7 @@ void config()
   fitter.SetKstepSize(k_step);
   fitter.SetPstepSize(p_step);
 
-  fitter.SetNthreads(n_thr);
+  // fitter.UseNbd();
   fitter.UseGamma();
 
   float chi2=1e10;
