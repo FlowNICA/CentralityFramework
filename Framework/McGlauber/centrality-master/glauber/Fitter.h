@@ -86,7 +86,7 @@ namespace Glauber
         void SetFitMinBin(Int_t min) { fFitMinBin = min; }
         void SetFitMaxBin(Int_t min) { fFitMaxBin = min; }
         void SetNormMinBin(Int_t min) { fNormMinBin = min; }
-        void SetBinSize(Int_t size) { fBinSize = size; }
+        void SetBinSize(Float_t size) { fBinSize = size; }
         void SetOutDirName(TString name) { fOutDirName = name; }
         void SetMode(const TString mode) { fMode = mode; }
         void SetMassNumber(Float_t A) { fA = A; }
@@ -254,7 +254,7 @@ namespace Glauber
         Float_t fMaxValue{-1.};
 
         Int_t fNbins{-1};
-        Int_t fBinSize{1};
+        Float_t fBinSize{1};
 
         Int_t fFitMinBin{-1};
         Int_t fFitMaxBin{-1};
