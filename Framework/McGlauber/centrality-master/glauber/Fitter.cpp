@@ -341,7 +341,7 @@ void Glauber::Fitter::SetGlauberFitHisto(float f, float mu, float k, float p, in
         if (tot_denum > 0)
             tot_progress /= tot_denum;
         std::cout << tot_progress << "% \r" << std::flush;
-        if (tot_progress < 100)
+        if (tot_progress < 100 && tot_progress > 0)
             isOver = false;
         std::chrono::milliseconds dura(200);
         std::this_thread::sleep_for(dura);
