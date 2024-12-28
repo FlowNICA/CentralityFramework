@@ -37,11 +37,12 @@ START_DIR=$PWD
 MAIN_DIR=$START_DIR
 
 # Where is CentralityFramework stored
-CENTRALITY_FRAMEWORK_DIR=${MAIN_DIR}/../../Framework/centrality-master
+CENTRALITY_FRAMEWORK_DIR=${MAIN_DIR}/../Framework/McGlauber/centrality-master
 
 # Setting up tmp directory & log file
 TMPALL=${MAIN_DIR}/TMP
 TMP=$TMPALL/TMP_${JOB_ID}_${TASK_ID}
+mkdir -p ${TMP}
 
 # Creating output
 COMMIT=System_Energy_ShortInfo
@@ -61,7 +62,7 @@ LOG=$OUT_LOG/JOB_${JOB_ID}_${TASK_ID}.log
 echo "Job output." &> $LOG
 echo "-------------------------------" &>> $LOG
 
-PARAMETER_LIST=$MAIN_DIR/parameter.list
+PARAMETER_LIST=$MAIN_DIR/../scripts/template/parameter.list
 
 # Read N-th line from the parameter list. N = Number of the job in job array
 PARAMETER_LINE=`sed "${TASK_ID}q;d" ${PARAMETER_LIST}`
@@ -75,8 +76,8 @@ PARAMETER_k0=${TAIL%%:*[0-9]}
 TAIL=${TAIL#[0-9]*:}
 PARAMETER_k1=${TAIL%%:*[0-9]}
 TAIL=${TAIL#[0-9]*:}
-PARAMETER_p0=${PARAMETER_LINE%%:*[0-9]}
-TAIL=${PARAMETER_LINE#[0-9]*:}
+PARAMETER_p0=${TAIL%%:*[0-9]}
+TAIL=${TAIL#[0-9]*:}
 PARAMETER_p1=${TAIL%%:*[0-9]}
 TAIL=${TAIL#[0-9]*:}
 PARAMETER_mult0=${TAIL%%:*[0-9]}
@@ -97,10 +98,8 @@ echo "mult_min = ${PARAMETER_mult0}" &>>$LOG
 echo "mult_max = ${PARAMETER_mult1}" &>>$LOG
 echo "-------------------------------" &>> $LOG
 
-mkdir -p $TMP
-
 # Copy config file to TMP directory
-cp ${MAIN_DIR}/config.c.template ${TMP}/config.c
+cp ${MAIN_DIR}/../scripts/template/config.c.template ${TMP}/config.c
 
 # Replacing template fit params with specific variable values
 sed -e "s|fminfmin|${PARAMETER_f0}|" -i ${TMP}/config.c
