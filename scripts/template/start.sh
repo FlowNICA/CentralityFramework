@@ -1,20 +1,35 @@
-#!/bin/bash
+1;115;0c#!/bin/bash
 
 #
-#$ -wd /scratch1/$USER/Soft/Centrality/TMP/
-#$ -cwd
-#$ -N run_centrality_fit
-#$ -q all.q
-#$ -l h_rt=8:00:00
-#$ -l s_rt=8:00:00
-#$ -t 1-200
+#SBATCH -D /scratch1/$USER/Soft/Centrality/TMP/
+#SBATCH -J run_centrality_fit
+#SBATCH -p all.q
+#SBATCH --time=8:00:00
+#SBATCH -a 1-200
 #
-#$ -o /scratch1/$USER/Soft/Centrality/TMP/
-#$ -e /scratch1/$USER/Soft/Centrality/TMP/
+#SBATCH -o /scratch1/$USER/Soft/Centrality/TMP/slurm_%A_%a.out
+#SBATCH -e /scratch1/$USER/Soft/Centrality/TMP/slurm_%A_%a.out
 #
 
-export JOB_ID=${JOB_ID}
-export TASK_ID=${SGE_TASK_ID}
+ls /eos/nica
+sleep 20
+
+ls /cvmfs/nica.jinr.ru/
+sleep 20
+
+source /cvmfs/nica.jinr.ru/sw/os/login.sh latest
+module add mpddev/v24.12.24-1
+
+export JOB_ID=$SLURM_ARRAY_JOB_ID
+export TASK_ID=$SLURM_ARRAY_TASK_ID
+
+# Input file with MC-Glauber tree & tree name
+export inFileGlauberName=
+export inTreeGlauberName=
+
+# Input file with multiplicity histogram & histogram name
+export inFileDataName=
+export inHistDataName=
 
 START_DIR=$PWD
 
@@ -60,6 +75,10 @@ PARAMETER_k0=${TAIL%%:*[0-9]}
 TAIL=${TAIL#[0-9]*:}
 PARAMETER_k1=${TAIL%%:*[0-9]}
 TAIL=${TAIL#[0-9]*:}
+PARAMETER_p0=${PARAMETER_LINE%%:*[0-9]}
+TAIL=${PARAMETER_LINE#[0-9]*:}
+PARAMETER_p1=${TAIL%%:*[0-9]}
+TAIL=${TAIL#[0-9]*:}
 PARAMETER_mult0=${TAIL%%:*[0-9]}
 TAIL=${TAIL#[0-9]*:}
 PARAMETER_mult1=${TAIL%%:*[0-9]}
@@ -72,6 +91,8 @@ echo "f0 = ${PARAMETER_f0}" &>>$LOG
 echo "f1 = ${PARAMETER_f1}" &>>$LOG
 echo "k0 = ${PARAMETER_k0}" &>>$LOG
 echo "k1 = ${PARAMETER_k1}" &>>$LOG
+echo "p0 = ${PARAMETER_p0}" &>>$LOG
+echo "p1 = ${PARAMETER_p1}" &>>$LOG
 echo "mult_min = ${PARAMETER_mult0}" &>>$LOG
 echo "mult_max = ${PARAMETER_mult1}" &>>$LOG
 echo "-------------------------------" &>> $LOG
@@ -79,30 +100,33 @@ echo "-------------------------------" &>> $LOG
 mkdir -p $TMP
 
 # Copy config file to TMP directory
-cp ${MAIN_DIR}/config.txt.template ${TMP}/config.txt
+cp ${MAIN_DIR}/config.c.template ${TMP}/config.c
 
 # Replacing template fit params with specific variable values
-sed -e "s|fminfmin|${PARAMETER_f0}|" -i ${TMP}/config.txt
-sed -e "s|fmaxfmax|${PARAMETER_f1}|" -i ${TMP}/config.txt
-sed -e "s|kminkmin|${PARAMETER_k0}|" -i ${TMP}/config.txt
-sed -e "s|kmaxkmax|${PARAMETER_k1}|" -i ${TMP}/config.txt
-sed -e "s|multminmultmin|${PARAMETER_mult0}|" -i ${TMP}/config.txt
-sed -e "s|multmaxmultmax|${PARAMETER_mult1}|" -i ${TMP}/config.txt
+sed -e "s|fminfmin|${PARAMETER_f0}|" -i ${TMP}/config.c
+sed -e "s|fmaxfmax|${PARAMETER_f1}|" -i ${TMP}/config.c
+sed -e "s|kminkmin|${PARAMETER_k0}|" -i ${TMP}/config.c
+sed -e "s|kmaxkmax|${PARAMETER_k1}|" -i ${TMP}/config.c
+sed -e "s|pminpmin|${PARAMETER_p0}|" -i ${TMP}/config.c
+sed -e "s|pmaxpmax|${PARAMETER_p1}|" -i ${TMP}/config.c
+sed -e "s|multminmultmin|${PARAMETER_mult0}|" -i ${TMP}/config.c
+sed -e "s|multmaxmultmax|${PARAMETER_mult1}|" -i ${TMP}/config.c
+sed -e "s|Path-to-Glauber-file|${inFileGlauberName}|" -i ${TMP}/config.c
+sed -e "s|Mc-Glauber-tree-name|${inTreeGlauberName}|" -i ${TMP}/config.c
+sed -e "s|Path-to-RefMult-file|${inFileDataName}|" -i ${TMP}/config.c
+sed -e "s|Mult-histo-name|${inHistDataName}|"      -i ${TMP}/config.c
 
-cat ${TMP}/config.txt &>>$LOG
+cat ${TMP}/config.c &>>$LOG
 echo "-------------------------------" &>> $LOG
-
-# Sourcing ROOT
-source /opt/fairsoft/mpd/new/bin/thisroot.sh
 
 # Compile binaries
 cd ${TMP}/
-cmake $CENTRALITY_FRAMEWORK_DIR/ &>>$LOG
+cmake $CENTRALITY_FRAMEWORK_DIR/ -Duse_multithreading=OFF &>>$LOG
 make &>>$LOG
 echo "-------------------------------" &>> $LOG
 
 # Do main program
-./glauber ./config.txt &>>$LOG
+./glauber ./config.c &>>$LOG
 echo "-------------------------------" &>> $LOG
 
 # Copy output files into output directory
