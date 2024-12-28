@@ -2,11 +2,11 @@ void config()
 {
   // Set up input file from MC-Glauber
   std::string inFileGlauberName = "Path-to-Glauber-file";
-  std::string inTreeGlauberName = "Mc-Glauber-tree-name" //"nt_Bi_Bi"; "nt_Au3_Au3"; "nt_CsI_Xe124";
+  std::string inTreeGlauberName = "Mc-Glauber-tree-name"; //"nt_Bi_Bi"; "nt_Au3_Au3"; "nt_CsI_Xe124";
   
   // Set up input file with data multiplicity
   std::string inFileDataName = "Path-to-RefMult-file";
-  std::string inHistDataName = "Mult-histo-name" // for example "hRefMultSTAR";
+  std::string inHistDataName = "Mult-histo-name"; // for example "hRefMultSTAR";
 
   // Set up output directory
   std::string outDir = ".";

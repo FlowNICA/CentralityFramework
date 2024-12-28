@@ -1,4 +1,4 @@
-1;115;0c#!/bin/bash
+#!/bin/bash
 
 #
 #SBATCH -D /scratch1/$USER/Soft/Centrality/TMP/
