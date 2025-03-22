@@ -21,7 +21,7 @@ if (CMAKE_BUILD_TYPE MATCHES DEBUG)
 endif ()
 
 if (NOT DEFINED use_multithreading)
-        set(use_multithreading ON)
+        set(use_multithreading OFF)
 endif()
 
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -ggdb -DDEBUG -D__DEBUG -Wall")
