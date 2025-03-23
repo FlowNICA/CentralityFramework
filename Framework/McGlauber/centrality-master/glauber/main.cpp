@@ -1,22 +1,20 @@
-#include <iostream>
 #include <fstream>
-#include <vector>
+#include <iostream>
 #include <string>
+#include <vector>
 
 #include "Fitter.h"
 #include "FitterHelper.h"
 
-#include "TROOT.h"
+#include "TFile.h"
 #include "TH1.h"
 #include "TH2.h"
-#include "TFile.h"
 #include "TLegend.h"
-#include "TH2.h"
+#include "TROOT.h"
 #include "TStopwatch.h"
 
-int main(int argc, char **argv)
-{
-  if( argc < 2 ){
+int main(int argc, char **argv) {
+  if (argc < 2) {
     std::cerr << "No argumets provided!" << std::endl;
     std::cerr << "./glauber macro.C" << std::endl;
     std::cerr << "Arguments:" << std::endl;
@@ -29,7 +27,7 @@ int main(int argc, char **argv)
   TStopwatch timer;
   timer.Start();
 
-  std::cout << "glauber: Executing "+macro << std::endl;
+  std::cout << "glauber: Executing " + macro << std::endl;
   gROOT->Macro(macro.c_str());
 
   timer.Stop();
