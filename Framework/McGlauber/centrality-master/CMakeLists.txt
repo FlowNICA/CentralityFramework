@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 4.0)
 project(Centrality)
 set(CMAKE_MACOSX_RPATH 1)
 set(PROJECT_VERSION 1.0)
