@@ -8,6 +8,74 @@
 #include "TRandom.h"
 #include "TTree.h"
 
+#include <algorithm>
+#include <atomic>
+#include <iomanip>
+#include <iostream>
+#include <string>
+#ifdef __THREADS_ON__
+#include <chrono>
+#endif
+
+namespace {
+/* Text progress bar, redrawn in place only when the percentage changes */
+class ProgressBar {
+public:
+  ProgressBar(std::string label, long total)
+      : fLabel(std::move(label)), fTotal(total > 0 ? total : 1) {}
+
+  void Print(long done) {
+    if (done > fTotal)
+      done = fTotal;
+    const int percent = (int)(100 * done / fTotal);
+    if (percent == fLastPercent)
+      return;
+    fLastPercent = percent;
+    const int filled = (int)(kWidth * done / fTotal);
+    std::cout << "\t" << fLabel << " [" << std::string(filled, '#')
+              << std::string(kWidth - filled, '.') << "] " << std::setw(3)
+              << percent << "%\r" << std::flush;
+  }
+
+  void Finish() {
+    Print(fTotal);
+    std::cout << std::endl;
+  }
+
+private:
+  static constexpr int kWidth{50};
+  std::string fLabel;
+  long fTotal;
+  int fLastPercent{-1};
+};
+
+#ifdef __THREADS_ON__
+/* Redraw the progress bar until all workers are finished, then join them */
+void JoinWithProgress(std::vector<std::thread> &threads,
+                      const std::atomic<int> &n_finished,
+                      const std::atomic<long unsigned int> &progress,
+                      ProgressBar &bar) {
+  while (n_finished < (int)threads.size()) {
+    bar.Print(progress);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+  for (auto &thread : threads)
+    thread.join();
+  bar.Finish();
+}
+#endif
+
+/* Sum of n i.i.d. Gamma(alpha, theta) draws is one Gamma(n*alpha, theta) draw */
+float SumOfGammas(int n, std::gamma_distribution<> &gammadist,
+                  std::mt19937 &rngnum) {
+  if (n <= 0)
+    return 0.;
+  const auto &par = gammadist.param();
+  return gammadist(rngnum, std::gamma_distribution<>::param_type(
+                               n * par.alpha(), par.beta()));
+}
+} // namespace
+
 ClassImp(Glauber::Fitter)
 
     // -----   Default constructor   -------------------------------------------
@@ -323,52 +391,33 @@ void Glauber::Fitter::SetGlauberFitHisto(float f, float mu, float k, float p,
   fPsi5_VS_Multiplicity.SetName("Psi5_VS_Multiplicity");
 
   int nentries = (int)(n * (1. - p));
-  int plp_counter = nentries;
 #ifndef __THREADS_ON__
-  BuildMultiplicity(f, mu, k, p, 0, nentries, plp_counter, n, nentries);
+  BuildMultiplicity(f, mu, k, p, 0, nentries, nentries, n, nentries);
 #endif
 #ifdef __THREADS_ON__
   std::vector<std::thread> v_thr;
-  std::vector<std::thread::id> v_thr_ids;
-  std::atomic<long unsigned int> v_progress;
+  std::atomic<long unsigned int> v_progress{0};
+  std::atomic<int> n_finished{0};
+  ProgressBar bar("Glauber::Fitter::SetGlauberFitHisto", nentries);
 
   for (unsigned int i = 0; i < fNthreads; i++) {
-    int n_part = (int)(n / fNthreads);
-    int i_start = i * n_part;
-    int i_stop = (int)((i + 1) * n_part * (1. - p));
+    /* events [i_start, p_stop) of thread i: main events first, then pile-up */
+    int i_start = (int)((long long)i * n / fNthreads);
+    int p_stop = (int)((long long)(i + 1) * n / fNthreads);
+    int i_stop = i_start + (int)((p_stop - i_start) * (1. - p));
     int p_start = i_stop;
-    int p_stop = (i + 1) * n_part;
-    v_thr.emplace_back(&Glauber::Fitter::BuildMultiplicity, this, f, mu, k, p,
-                       i_start, i_stop, p_start, p_stop, std::ref(v_progress));
-    // v_thr.emplace_back(&Glauber::Fitter::BuildMultiplicity, this, f, mu, k,
-    // p, i_start, i_stop, p_start, p_stop);
+    v_thr.emplace_back([this, f, mu, k, p, i_start, i_stop, p_start, p_stop,
+                        &v_progress, &n_finished] {
+      BuildMultiplicity(f, mu, k, p, i_start, i_stop, p_start, p_stop,
+                        v_progress);
+      n_finished++;
+    });
   }
 
-  bool isOver = false;
-  // while (not isOver) {
-  //   isOver = true;
-  //   if (fFirstIteration)
-  //     std::cout << "\tGlauber::Fitter::SetGlauberFitHisto: Initialization, "
-  //                  "progress: ";
-  //   else
-  //     std::cout << "\tGlauber::Fitter::SetGlauberFitHisto: Constructing "
-  //                  "multiplicity, progress: ";
-  //   std::cout << "[" << v_progress << "/" << n << "]\r" << std::flush;
-  //   if ((int)v_progress < nentries && v_progress > 0)
-  //     isOver = false;
-  //   std::chrono::milliseconds dura(100);
-  //   std::this_thread::sleep_for(dura);
-  // }
-
-  for (auto &thread : v_thr)
-    thread.join();
+  JoinWithProgress(v_thr, n_finished, v_progress, bar);
 #endif
   if (Norm2Data)
     NormalizeGlauberFit();
-
-  std::cout << "\t                                                             "
-               "                                   \r"
-            << std::flush;
 }
 
 #ifndef __THREADS_ON__
@@ -390,14 +439,15 @@ bool Glauber::Fitter::BuildMultiplicity(float f, float mu, float k, float p,
   std::gamma_distribution<> gammadist((float)((mu * k) / (mu + k)),
                                       (float)((k + mu) / k));
   int plp_counter = plp_start;
+#ifndef __THREADS_ON__
+  ProgressBar bar("Glauber::Fitter::SetGlauberFitHisto", i_stop - i_start);
+#endif
 #ifdef __THREADS_ON__
   std::lock_guard<std::mutex> guard(fMtx);
 #endif
   for (int i = i_start; i < i_stop; i++) {
 #ifndef __THREADS_ON__
-    std::cout << "\tGlauber::Fitter::SetGlauberFitHisto: Constructing "
-                 "multiplicity, event ["
-              << i << "/" << n << "]\r" << std::flush;
+    bar.Print(i - i_start);
 #endif
 #ifdef __THREADS_ON__
     _progress++;
@@ -405,13 +455,13 @@ bool Glauber::Fitter::BuildMultiplicity(float f, float mu, float k, float p,
     const int Na = int(Nancestors(f, fvNpart.at(i), fvNcoll.at(i)));
 
     float nHits{0.}, nPlp{0.};
-    for (int j = 0; j < Na; j++)
-      nHits += gammadist(rngnum);
+    nHits += SumOfGammas(Na, gammadist, rngnum);
     if (p > 1e-10 && unirnd(rngnum) <= p) {
+      if (plp_counter >= plp_stop)
+        plp_counter = plp_start;
       const int Na1 =
           int(Nancestors(f, fvNpart.at(plp_counter), fvNcoll.at(plp_counter)));
-      for (int j = 0; j < Na1; j++)
-        nPlp += gammadist(rngnum);
+      nPlp += SumOfGammas(Na1, gammadist, rngnum);
       plp_counter++;
 
       fGlauberPlpHisto.Fill(nHits + nPlp);
@@ -435,6 +485,9 @@ bool Glauber::Fitter::BuildMultiplicity(float f, float mu, float k, float p,
     fEcc5_VS_Multiplicity.Fill(nHits, fvEcc5.at(i));
     fPsi5_VS_Multiplicity.Fill(nHits, fvPsi5.at(i));
   }
+#ifndef __THREADS_ON__
+  bar.Finish();
+#endif
   return true;
 }
 
@@ -569,55 +622,275 @@ float Glauber::Fitter::FitGlauber(Float_t f0, Float_t f1, Float_t k0,
   tree->Branch("chi2_error", &chi2_error, "chi2_error/F");
   tree->Branch("sigma", &sigma, "sigma/F");
 
-  int n = 1;
-  for (float i = f0; i <= f1; i = i + fFstep) {
-    f = i;
-    for (float j = k0; j <= k1; j = j + fKstep) {
-      k = j;
+  if (fNiter == 0)
+    fNiter = 2;
+
+  /* Golden section state of a single (f, k, p) grid point */
+  struct GridPoint {
+    float f, k, p;
+    float mu_min, mu_max, mu_1, mu_2;
+    float chi2_mu1, chi2_mu2, chi2_mu1_error, chi2_mu2_error;
+  };
+  /* Multiplicity to be built with a given mu for a given grid point */
+  struct Evaluation {
+    int g;
+    float mu;
+    int nentries;
+    bool isMu2;
+  };
+
+  std::vector<GridPoint> grid;
+  for (float i = f0; i <= f1; i = i + fFstep)
+    for (float j = k0; j <= k1; j = j + fKstep)
       for (float h = p0; h <= p1; h = h + fPstep) {
-        p = h;
-        mu = fMaxValue / NancestorsMax(f);
-        const float mu_min = 0.0 * mu;
-        const float mu_max = 1.0 * mu;
+        GridPoint gp{};
+        gp.f = i;
+        gp.k = j;
+        gp.p = h;
+        gp.mu_min = 0.;
+        gp.mu_max = fMaxValue / NancestorsMax(gp.f);
+        grid.push_back(gp);
+      }
 
-        if (fNiter == 0)
-          fNiter = 2;
+  if (grid.empty()) {
+    std::cout << "FitGlauber: *** Error - empty (f, k, p) grid" << std::endl;
+    file->Close();
+    return Chi2Min;
+  }
 
-        FindMuGoldenSection(&mu, &chi2, &chi2_error, mu_min, mu_max, f, k, p,
-                            nEvents, fNiter, n);
-        n = n + fNiter;
-        sigma = (mu / k + 1) * mu;
+  const float phi = (float)((1 + TMath::Sqrt(5)) / 2);
 
-        tree->Fill();
+  /* Model histogram binning, same as in SetGlauberFitHisto */
+  const TAxis axis(fNbins * 1.3, 0, 1.3 * fMaxValue);
+  const int nBinsModel = axis.GetNbins() + 2;
 
-        if (chi2 < Chi2Min) {
-          f_fit = f;
-          mu_fit = mu;
-          k_fit = k;
-          p_fit = p;
-          Chi2Min = chi2;
-          Chi2Min_error = chi2_error;
-          fBestFitHisto = fGlauberFitHisto;
-          fBestPlpHisto = fGlauberPlpHisto;
-          fBestSngHisto = fGlauberSngHisto;
-          fBestPlpEv1Ev2 = fGlauberPlpEv1Ev2;
-          fBestB_VS_Multiplicity = fB_VS_Multiplicity;
-          fBestNpart_VS_Multiplicity = fNpart_VS_Multiplicity;
-          fBestNcoll_VS_Multiplicity = fNcoll_VS_Multiplicity;
-          fBestEcc1_VS_Multiplicity = fEcc1_VS_Multiplicity;
-          fBestPsi1_VS_Multiplicity = fPsi1_VS_Multiplicity;
-          fBestEcc2_VS_Multiplicity = fEcc2_VS_Multiplicity;
-          fBestPsi2_VS_Multiplicity = fPsi2_VS_Multiplicity;
-          fBestEcc3_VS_Multiplicity = fEcc3_VS_Multiplicity;
-          fBestPsi3_VS_Multiplicity = fPsi3_VS_Multiplicity;
-          fBestEcc4_VS_Multiplicity = fEcc4_VS_Multiplicity;
-          fBestPsi4_VS_Multiplicity = fPsi4_VS_Multiplicity;
-          fBestEcc5_VS_Multiplicity = fEcc5_VS_Multiplicity;
-          fBestPsi5_VS_Multiplicity = fPsi5_VS_Multiplicity;
+  const int lowchibin = fFitMinBin;
+  const int highchibin = fFitMaxBin < fNbins ? fFitMaxBin : fNbins;
+
+  /* Same as NormalizeGlauberFit + GetChi2 + GetChi2Error, but on raw counts */
+  auto Chi2FromCounts = [&](const std::vector<float> &counts, float &chi2_out,
+                            float &chi2_error_out) {
+    int modelInt{0};
+    int dataInt{0};
+    for (int i = lowchibin; i < highchibin; i++) {
+      modelInt += counts.at(i + 1);
+      dataInt += fDataHisto.GetBinContent(i + 1);
+    }
+    if (modelInt == 0) {
+      chi2_out = 1e10;
+      chi2_error_out = 0.;
+      return;
+    }
+    const float scale = (float)dataInt / modelInt;
+
+    float sum_chi2{0.};
+    float sum_error{0.};
+    for (int i = lowchibin; i <= highchibin; ++i) {
+      const float data = fDataHisto.GetBinContent(i);
+      if (data < 1.0)
+        continue;
+      const float data_error = fDataHisto.GetBinError(i);
+      const float model = counts.at(i) * scale;
+      const float model_error = sqrt(counts.at(i)) * scale;
+      const float error2 = pow(data_error, 2) + pow(model_error, 2);
+      const float diff = model - data;
+      sum_chi2 += pow(diff, 2) / error2;
+      sum_error += pow(diff * (model_error - data_error) / error2, 2);
+    }
+    chi2_out = sum_chi2 / (highchibin - lowchibin + 1);
+    chi2_error_out = 2 * pow(sum_error, 0.5) / (highchibin - lowchibin + 1);
+  };
+
+  /*
+   * Build multiplicity distributions for all evaluations in one pass over
+   * Glauber events: for each event i, loop over all requested (f, mu, k, p)
+   */
+  auto BuildAll = [&](const std::vector<Evaluation> &evals,
+                      std::vector<std::vector<float>> &counts,
+                      const std::string &label) {
+    counts.assign(evals.size(), std::vector<float>(nBinsModel, 0.));
+    int i_stop = 0;
+    for (const auto &e : evals)
+      i_stop = std::max(i_stop, e.nentries);
+
+#ifndef __THREADS_ON__
+    const unsigned int n_workers = 1;
+#endif
+#ifdef __THREADS_ON__
+    const unsigned int n_workers = std::max(1u, fNthreads);
+#endif
+    /* progress is counted in events, summed over all workers */
+    ProgressBar bar(label, (long)i_stop * n_workers);
+    std::atomic<long unsigned int> progress{0};
+    std::atomic<int> n_finished{0};
+    const int progress_step = 1024;
+
+    /* each worker takes every n_workers-th evaluation */
+    auto worker = [&](unsigned int i_worker, unsigned int n_workers) {
+      std::random_device rd;
+      std::mt19937 rngnum(rd());
+      std::uniform_real_distribution<float> unirnd(0., 1.);
+
+      std::vector<size_t> my_evals;
+      std::vector<std::gamma_distribution<>> gammadists;
+      std::vector<int> plp_counters;
+      for (size_t e = i_worker; e < evals.size(); e += n_workers) {
+        const float mu = evals[e].mu;
+        const float k = grid[evals[e].g].k;
+        my_evals.push_back(e);
+        gammadists.emplace_back((float)((mu * k) / (mu + k)),
+                                (float)((k + mu) / k));
+        plp_counters.push_back(evals[e].nentries);
+      }
+
+      for (int i = 0; i < i_stop; i++) {
+#ifndef __THREADS_ON__
+        bar.Print(i);
+#endif
+        if ((i + 1) % progress_step == 0)
+          progress += progress_step;
+        const float npart = fvNpart[i];
+        const float ncoll = fvNcoll[i];
+        for (size_t m = 0; m < my_evals.size(); m++) {
+          const Evaluation &e = evals[my_evals[m]];
+          if (i >= e.nentries)
+            continue;
+          const float f = grid[e.g].f;
+          const float p = grid[e.g].p;
+          auto &gammadist = gammadists[m];
+
+          const int Na = int(Nancestors(f, npart, ncoll));
+          float nHits{0.};
+          nHits += SumOfGammas(Na, gammadist, rngnum);
+          if (p > 1e-10 && unirnd(rngnum) <= p) {
+            int &plp_counter = plp_counters[m];
+            if (plp_counter >= nEvents)
+              plp_counter = e.nentries;
+            const int Na1 = int(Nancestors(f, fvNpart[plp_counter],
+                                           fvNcoll[plp_counter]));
+            nHits += SumOfGammas(Na1, gammadist, rngnum);
+            plp_counter++;
+          }
+          counts[my_evals[m]][axis.FindFixBin(nHits)] += 1.;
         }
       }
+      progress += i_stop % progress_step;
+      n_finished++;
+    };
+
+#ifndef __THREADS_ON__
+    worker(0, n_workers);
+    bar.Finish();
+#endif
+#ifdef __THREADS_ON__
+    std::vector<std::thread> v_thr;
+    for (unsigned int i = 0; i < n_workers; i++)
+      v_thr.emplace_back(worker, i, n_workers);
+    JoinWithProgress(v_thr, n_finished, progress, bar);
+#endif
+  };
+
+  auto MakeEvaluation = [&](int g, float mu, bool isMu2) {
+    return Evaluation{g, mu, (int)(nEvents * (1. - grid[g].p)), isMu2};
+  };
+
+  std::vector<Evaluation> evals;
+  std::vector<std::vector<float>> counts;
+
+  /* Initial golden section points (mu_1 and mu_2) for all grid points */
+  for (int g = 0; g < (int)grid.size(); g++) {
+    auto &gp = grid[g];
+    gp.mu_1 = gp.mu_max - (gp.mu_max - gp.mu_min) / phi;
+    gp.mu_2 = gp.mu_min + (gp.mu_max - gp.mu_min) / phi;
+    evals.push_back(MakeEvaluation(g, gp.mu_1, false));
+    evals.push_back(MakeEvaluation(g, gp.mu_2, true));
+  }
+  std::cout << "FitGlauber: " << grid.size() << " (f, k, p) points"
+            << std::endl;
+  BuildAll(evals, counts, "FitGlauber: initialization");
+  for (int g = 0; g < (int)grid.size(); g++) {
+    auto &gp = grid[g];
+    Chi2FromCounts(counts[2 * g], gp.chi2_mu1, gp.chi2_mu1_error);
+    Chi2FromCounts(counts[2 * g + 1], gp.chi2_mu2, gp.chi2_mu2_error);
+  }
+
+  /* Golden section iterations, all grid points at once */
+  for (int j = 0; j < fNiter; j++) {
+    evals.clear();
+    for (int g = 0; g < (int)grid.size(); g++) {
+      auto &gp = grid[g];
+      if (gp.chi2_mu1 >= gp.chi2_mu2) {
+        gp.mu_min = gp.mu_1;
+        gp.mu_1 = gp.mu_2;
+        gp.mu_2 = gp.mu_min + (gp.mu_max - gp.mu_min) / phi;
+        gp.chi2_mu1 = gp.chi2_mu2;
+        evals.push_back(MakeEvaluation(g, gp.mu_2, true));
+      } else {
+        gp.mu_max = gp.mu_2;
+        gp.mu_2 = gp.mu_1;
+        gp.mu_1 = gp.mu_max - (gp.mu_max - gp.mu_min) / phi;
+        gp.chi2_mu2 = gp.chi2_mu1;
+        evals.push_back(MakeEvaluation(g, gp.mu_1, false));
+      }
+    }
+    BuildAll(evals, counts,
+             Form("FitGlauber: iteration [%d/%d]", j + 1, fNiter));
+    for (int g = 0; g < (int)grid.size(); g++) {
+      auto &gp = grid[g];
+      if (evals[g].isMu2)
+        Chi2FromCounts(counts[g], gp.chi2_mu2, gp.chi2_mu2_error);
+      else
+        Chi2FromCounts(counts[g], gp.chi2_mu1, gp.chi2_mu1_error);
+
+      std::cout << "n = " << 1 + g * fNiter + j << " f = " << gp.f
+                << " k = " << gp.k << " p = " << gp.p << " mu1 = " << gp.mu_1
+                << " mu2 = " << gp.mu_2 << " chi2_mu1 = " << gp.chi2_mu1
+                << " chi2_mu2 = " << gp.chi2_mu2 << std::endl;
     }
   }
+
+  for (const auto &gp : grid) {
+    f = gp.f;
+    k = gp.k;
+    p = gp.p;
+    /* take min(mu), min(chi2), min(chi2_error) */
+    const bool isFirst = gp.chi2_mu1 < gp.chi2_mu2;
+    mu = isFirst ? gp.mu_1 : gp.mu_2;
+    chi2 = isFirst ? gp.chi2_mu1 : gp.chi2_mu2;
+    chi2_error = isFirst ? gp.chi2_mu1_error : gp.chi2_mu2_error;
+    sigma = (mu / k + 1) * mu;
+
+    tree->Fill();
+
+    if (chi2 < Chi2Min) {
+      f_fit = f;
+      mu_fit = mu;
+      k_fit = k;
+      p_fit = p;
+      Chi2Min = chi2;
+      Chi2Min_error = chi2_error;
+    }
+  }
+
+  /* Build full set of histograms for the best fit parameters */
+  SetGlauberFitHisto(f_fit, mu_fit, k_fit, p_fit, nEvents);
+  fBestFitHisto = fGlauberFitHisto;
+  fBestPlpHisto = fGlauberPlpHisto;
+  fBestSngHisto = fGlauberSngHisto;
+  fBestPlpEv1Ev2 = fGlauberPlpEv1Ev2;
+  fBestB_VS_Multiplicity = fB_VS_Multiplicity;
+  fBestNpart_VS_Multiplicity = fNpart_VS_Multiplicity;
+  fBestNcoll_VS_Multiplicity = fNcoll_VS_Multiplicity;
+  fBestEcc1_VS_Multiplicity = fEcc1_VS_Multiplicity;
+  fBestPsi1_VS_Multiplicity = fPsi1_VS_Multiplicity;
+  fBestEcc2_VS_Multiplicity = fEcc2_VS_Multiplicity;
+  fBestPsi2_VS_Multiplicity = fPsi2_VS_Multiplicity;
+  fBestEcc3_VS_Multiplicity = fEcc3_VS_Multiplicity;
+  fBestPsi3_VS_Multiplicity = fPsi3_VS_Multiplicity;
+  fBestEcc4_VS_Multiplicity = fEcc4_VS_Multiplicity;
+  fBestPsi4_VS_Multiplicity = fPsi4_VS_Multiplicity;
+  fBestEcc5_VS_Multiplicity = fEcc5_VS_Multiplicity;
+  fBestPsi5_VS_Multiplicity = fPsi5_VS_Multiplicity;
 
   SetNBDhist(mu_fit, k_fit);
 
@@ -767,6 +1040,7 @@ float Glauber::Fitter::NBD(float n, float mu, float k) const {
 std::unique_ptr<TH1F> Glauber::Fitter::GetModelHisto(const float range[2],
                                                      TString name,
                                                      int nEvents) {
+  fvModel.clear();
   fvModelInput.clear();
 
   const float p = fOptimalP;
@@ -783,64 +1057,34 @@ std::unique_ptr<TH1F> Glauber::Fitter::GetModelHisto(const float range[2],
                                         fSimTree->GetMaximum(name)));
 
   int nentries = (int)(nEvents * (1. - p));
-  int plp_counter = nentries;
 #ifndef __THREADS_ON__
-  BuildModel(range, 0, nentries, plp_counter, nEvents, nentries);
+  BuildModel(range, 0, nentries, nentries, nEvents, nentries);
 #endif
 #ifdef __THREADS_ON__
   std::vector<std::thread> v_thr;
-  std::deque<std::atomic<int>> v_progress;
-
-  for (unsigned int i = 0; i < fNthreads; ++i)
-    v_progress.emplace_back(0);
+  std::atomic<long unsigned int> v_progress{0};
+  std::atomic<int> n_finished{0};
+  ProgressBar bar("Glauber::Fitter::GetModelHisto", nentries);
 
   for (unsigned int i = 0; i < fNthreads; ++i) {
-    int n_part = (int)(nEvents / fNthreads);
-    int i_start = i * n_part;
-    int i_stop = (int)((i + 1) * n_part * (1. - p));
+    /* events [i_start, p_stop) of thread i: main events first, then pile-up */
+    int i_start = (int)((long long)i * nEvents / fNthreads);
+    int p_stop = (int)((long long)(i + 1) * nEvents / fNthreads);
+    int i_stop = i_start + (int)((p_stop - i_start) * (1. - p));
     int p_start = i_stop;
-    int p_stop = (i + 1) * n_part;
-    // v_thr.emplace_back([&]
-    //                    { Glauber::Fitter::BuildModel(range, i_start, i_stop,
-    //                    p_start, p_stop, std::ref(v_progress[i])); });
-    v_thr.emplace_back(&Glauber::Fitter::BuildModel, this, range, i_start,
-                       i_stop, p_start, p_stop);
+    v_thr.emplace_back([this, range, i_start, i_stop, p_start, p_stop,
+                        &v_progress, &n_finished] {
+      BuildModel(range, i_start, i_stop, p_start, p_stop, v_progress);
+      n_finished++;
+    });
   }
 
-  // bool isOver = false;
-  // int tot_progress, tot_denum;
-  // while (not isOver)
-  // {
-  //     isOver = true;
-  //     tot_progress = 0;
-  //     tot_denum = 0;
-  //     std::cout << "\tGlauber::Fitter::GetModelHisto: Constructing
-  //     multiplicity, progress: "; for (int j = 0; j < fNthreads; ++j)
-  //     {
-  //         if (v_progress[j].load() == 0)
-  //             continue;
-  //         tot_progress += v_progress[j].load();
-  //         tot_denum++;
-  //     }
-  //     if (tot_denum > 0)
-  //         tot_progress /= tot_denum;
-  //     std::cout << tot_progress << "% \r" << std::flush;
-  //     if (tot_progress < 100)
-  //         isOver = false;
-  //     std::chrono::milliseconds dura(200);
-  //     std::this_thread::sleep_for(dura);
-  // }
-
-  for (auto &thread : v_thr)
-    thread.join();
+  JoinWithProgress(v_thr, n_finished, v_progress, bar);
 #endif
 
   for (auto &mult : fvModel) {
     hModel->Fill(mult);
   }
-  std::cout << "\t                                                             "
-               "                                   \r"
-            << std::flush;
 
   fvModel.clear();
   fvModelInput.clear();
@@ -854,10 +1098,9 @@ bool Glauber::Fitter::BuildModel(const float range[2], int i_start, int i_stop,
                                  int plp_start, int plp_stop, int n)
 #endif
 #ifdef __THREADS_ON__
-    // bool Glauber::Fitter::BuildModel(const float range[2], int i_start, int
-    // i_stop, int plp_start, int plp_stop, std::atomic<int> &_progress)
     bool Glauber::Fitter::BuildModel(const float range[2], int i_start,
-                                     int i_stop, int plp_start, int plp_stop)
+                                     int i_stop, int plp_start, int plp_stop,
+                                     std::atomic<long unsigned int> &_progress)
 #endif
 {
   const float f = fOptimalF;
@@ -865,41 +1108,43 @@ bool Glauber::Fitter::BuildModel(const float range[2], int i_start, int i_stop,
   const float k = fOptimalK;
   const float p = fOptimalP;
 
-  fvModel.clear();
-
   std::random_device rd;
   std::mt19937 rngnum(rd());
   std::uniform_real_distribution<float> unirnd(0., 1.);
   std::gamma_distribution<> gammadist((float)((mu * k) / (mu + k)),
                                       (float)((k + mu) / k));
   int plp_counter = plp_start;
+#ifndef __THREADS_ON__
+  ProgressBar bar("Glauber::Fitter::GetModelHisto", i_stop - i_start);
+#endif
 #ifdef __THREADS_ON__
   std::lock_guard<std::mutex> guard(fMtx);
 #endif
   for (int i = i_start; i < i_stop; i++) {
 #ifndef __THREADS_ON__
-    std::cout
-        << "\tGlauber::Fitter::BuildModel: Constructing multiplicity, event ["
-        << i << "/" << n << "]\r" << std::flush;
+    bar.Print(i - i_start);
 #endif
 #ifdef __THREADS_ON__
-    // _progress.store((i - i_start) * 100 / (i_stop - i_start) + 1);
+    _progress++;
 #endif
     const int Na = int(Nancestors(f, fvNpart.at(i), fvNcoll.at(i)));
 
     float nHits{0.};
-    for (int j = 0; j < Na; j++)
-      nHits += gammadist(rngnum);
+    nHits += SumOfGammas(Na, gammadist, rngnum);
     if (p > 1e-10 && unirnd(rngnum) <= p) {
+      if (plp_counter >= plp_stop)
+        plp_counter = plp_start;
       const int Na1 =
           int(Nancestors(f, fvNpart.at(plp_counter), fvNcoll.at(plp_counter)));
-      for (int j = 0; j < Na1; j++)
-        nHits += gammadist(rngnum);
+      nHits += SumOfGammas(Na1, gammadist, rngnum);
       plp_counter++;
     }
     if (nHits > range[0] && nHits < range[1]) {
       fvModel.push_back(fvModelInput.at(i));
     }
   }
+#ifndef __THREADS_ON__
+  bar.Finish();
+#endif
   return true;
 }

@@ -76,10 +76,8 @@ public:
                   int plp_stop, int n);
 #endif
 #ifdef __THREADS_ON__
-  // bool BuildModel(const float range[2], int i_start, int i_stop, int
-  // plp_start, int plp_stop, std::atomic<int> &_progress);
   bool BuildModel(const float range[2], int i_start, int i_stop, int plp_start,
-                  int plp_stop);
+                  int plp_stop, std::atomic<long unsigned int> &_progress);
 #endif
 
 #ifdef __THREADS_ON__

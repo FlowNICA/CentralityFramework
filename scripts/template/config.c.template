@@ -87,6 +87,6 @@ void config()
   DrawHistos(fitter, true, true, true, true);
 
   const float range[2] = {(float)multMin, (float)multMax};
-  std::unique_ptr<TH1F> hB(fitter.GetModelHisto (range, "B", 100000));
+  std::unique_ptr<TH1F> hB(fitter.GetModelHisto (range, "B", nevents));
   hB->SaveAs( "b_test.root" );
 }

@@ -15,15 +15,15 @@ void config()
   int Niter = 10;
 
   // Set up parameters for multiplicity fit
-  float f_min  = 0.2;
-  float f_max  = 0.9;
-  float f_step = 0.1;
-  float k_min  = 0.1;
-  float k_max  = 0.5;
-  float k_step = 0.1;
-  float p_min  = 0.01;
-  float p_max  = 0.03;
-  float p_step = 0.005;
+  float f_min  = 0.9;
+  float f_max  = 1.0;
+  float f_step = 0.01;
+  float k_min  = 1;
+  float k_max  = 1001;
+  float k_step = 50;
+  float p_min  = 0.00;
+  float p_max  = 0.05;
+  float p_step = 0.001;
 
   // Set up fit ranges
   int multMin = 10;
@@ -45,7 +45,7 @@ void config()
   // Set up number of threads
   // sets maximum concurent processes by default
   unsigned int n_thr = std::thread::hardware_concurrency();
-  
+
   std::unique_ptr<TFile> glauber_file{ TFile::Open(inFileGlauberName.c_str(), "read") };
   std::unique_ptr<TTree> glauber_tree{ (TTree*) glauber_file->Get(inTreeGlauberName.c_str()) };
 
@@ -61,7 +61,7 @@ void config()
   fitter.SetInputHisto(*data_hist);
   fitter.SetBinSize(bin_size);
   fitter.Init(nevents, mode.c_str());
-  
+
   fitter.SetFitMinBin(multMin);
   fitter.SetFitMaxBin(multMax);
   fitter.SetOutDirName(outDir.c_str());
@@ -82,11 +82,11 @@ void config()
   float p_fit    = fitter.GetOptimalP();
   float chi2_err = fitter.GetOptimalChi2Error();
 
-  std::cout << "f = " << f_fit << "    mu = " << mu_fit << "    k = " << k_fit << "    p = " << p_fit << "    chi2 = " << chi2 << "    chi2_error = " << chi2_err << std::endl; 
-  
+  std::cout << "f = " << f_fit << "    mu = " << mu_fit << "    k = " << k_fit << "    p = " << p_fit << "    chi2 = " << chi2 << "    chi2_error = " << chi2_err << std::endl;
+
   DrawHistos(fitter, true, true, true, true);
 
   const float range[2] = {(float)multMin, (float)multMax};
-  std::unique_ptr<TH1F> hB(fitter.GetModelHisto (range, "B", 100000));
+  std::unique_ptr<TH1F> hB(fitter.GetModelHisto (range, "B", nevents));
   hB->SaveAs( "b_test.root" );
 }
