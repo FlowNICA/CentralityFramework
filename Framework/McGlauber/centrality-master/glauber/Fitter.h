@@ -241,6 +241,11 @@ private:
   Float_t fMaxValue{-1.};
 
   Int_t fNbins{-1};
+
+  /* Binning of the model multiplicity histograms, set in Init */
+  Int_t fModelNbins{-1};
+  Double_t fModelMin{0.};
+  Double_t fModelMax{-1.};
   Float_t fBinSize{1};
 
   Int_t fFitMinBin{-1};

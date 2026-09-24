@@ -383,6 +383,16 @@ void Glauber::Fitter::Init(int nEntries, TString fmode) {
 
   fMaxValue = min + (max - min) * fNbins / fDataHisto.GetNbinsX();
 
+  /*
+   * Model multiplicity histograms: same bin width and lower edge as the data
+   * histogram (so model bin i matches data bin i) plus extra bins for the
+   * tail beyond the last filled data bin
+   */
+  const double width = (max - min) / fDataHisto.GetNbinsX();
+  fModelNbins = fNbins + std::max(50, (int)std::ceil(0.3 * fNbins));
+  fModelMin = min;
+  fModelMax = min + width * fModelNbins;
+
   std::cout << "fNbins = " << fNbins << std::endl;
   std::cout << "fMaxValue = " << fMaxValue << std::endl;
 
@@ -414,45 +424,45 @@ float Glauber::Fitter::NancestorsMax(float f) const {
 
 void Glauber::Fitter::SetGlauberFitHisto(float f, float mu, float k, float p,
                                          int n, Bool_t Norm2Data) {
-  fGlauberFitHisto = TH1F("glaub", "", fNbins * 1.3, 0, 1.3 * fMaxValue);
-  fGlauberPlpHisto = TH1F("glplp", "", fNbins * 1.3, 0, 1.3 * fMaxValue);
-  fGlauberSngHisto = TH1F("glsng", "", fNbins * 1.3, 0, 1.3 * fMaxValue);
-  fGlauberPlpEv1Ev2 =
-      TH2F("", "Multiplicity ev1 vs Multiplicity ev2;nHits 1;nHits 2",
-           fNbins * 1.3, 0, 1.3 * fMaxValue, fNbins * 1.3, 0, 1.3 * fMaxValue);
-  fB_VS_Multiplicity = TH2F("", "B VS Multiplicity;nHits;B, fm", fNbins * 1.3,
-                            0, 1.3 * fMaxValue, 200, 0, 20);
+  fGlauberFitHisto = TH1F("glaub", "", fModelNbins, fModelMin, fModelMax);
+  fGlauberPlpHisto = TH1F("glplp", "", fModelNbins, fModelMin, fModelMax);
+  fGlauberSngHisto = TH1F("glsng", "", fModelNbins, fModelMin, fModelMax);
+  fGlauberPlpEv1Ev2 = TH2F(
+      "", "Multiplicity ev1 vs Multiplicity ev2;nHits 1;nHits 2", fModelNbins,
+      fModelMin, fModelMax, fModelNbins, fModelMin, fModelMax);
+  fB_VS_Multiplicity = TH2F("", "B VS Multiplicity;nHits;B, fm", fModelNbins,
+                            fModelMin, fModelMax, 200, 0, 20);
   fNpart_VS_Multiplicity =
-      TH2F("", "N_{part} VS Multiplicity;nHits;N_{part}", fNbins * 1.3, 0,
-           1.3 * fMaxValue, 10000, 0, 10000);
+      TH2F("", "N_{part} VS Multiplicity;nHits;N_{part}", fModelNbins,
+           fModelMin, fModelMax, 10000, 0, 10000);
   fNcoll_VS_Multiplicity =
-      TH2F("", "N_{coll} VS Multiplicity;nHits;N_{coll}", fNbins * 1.3, 0,
-           1.3 * fMaxValue, 10000, 0, 10000);
+      TH2F("", "N_{coll} VS Multiplicity;nHits;N_{coll}", fModelNbins,
+           fModelMin, fModelMax, 10000, 0, 10000);
   fEcc1_VS_Multiplicity = TH2F("", "#epsilon1 VS Multiplicity;nHits;#epsilon1",
-                               fNbins * 1.3, 0, 1.3 * fMaxValue, 100, 0, 1);
+                               fModelNbins, fModelMin, fModelMax, 100, 0, 1);
   fPsi1_VS_Multiplicity =
-      TH2F("", "#psi1 VS Multiplicity;nHits;#psi1", fNbins * 1.3, 0,
-           1.3 * fMaxValue, 2 * 3.14 / 0.01, 0, 2 * 3.14);
+      TH2F("", "#psi1 VS Multiplicity;nHits;#psi1", fModelNbins, fModelMin,
+           fModelMax, 2 * 3.14 / 0.01, 0, 2 * 3.14);
   fEcc2_VS_Multiplicity = TH2F("", "#epsilon2 VS Multiplicity;nHits;#epsilon2",
-                               fNbins * 1.3, 0, 1.3 * fMaxValue, 100, 0, 1);
+                               fModelNbins, fModelMin, fModelMax, 100, 0, 1);
   fPsi2_VS_Multiplicity =
-      TH2F("", "#psi2 VS Multiplicity;nHits;#psi2", fNbins * 1.3, 0,
-           1.3 * fMaxValue, 2 * 3.14 / 0.01, 0, 2 * 3.14);
+      TH2F("", "#psi2 VS Multiplicity;nHits;#psi2", fModelNbins, fModelMin,
+           fModelMax, 2 * 3.14 / 0.01, 0, 2 * 3.14);
   fEcc3_VS_Multiplicity = TH2F("", "#epsilon3 VS Multiplicity;nHits;#epsilon3",
-                               fNbins * 1.3, 0, 1.3 * fMaxValue, 100, 0, 1);
+                               fModelNbins, fModelMin, fModelMax, 100, 0, 1);
   fPsi3_VS_Multiplicity =
-      TH2F("", "#psi3 VS Multiplicity;nHits;#psi3", fNbins * 1.3, 0,
-           1.3 * fMaxValue, 2 * 3.14 / 0.01, 0, 2 * 3.14);
+      TH2F("", "#psi3 VS Multiplicity;nHits;#psi3", fModelNbins, fModelMin,
+           fModelMax, 2 * 3.14 / 0.01, 0, 2 * 3.14);
   fEcc4_VS_Multiplicity = TH2F("", "#epsilon4 VS Multiplicity;nHits;#epsilon4",
-                               fNbins * 1.3, 0, 1.3 * fMaxValue, 100, 0, 1);
+                               fModelNbins, fModelMin, fModelMax, 100, 0, 1);
   fPsi4_VS_Multiplicity =
-      TH2F("", "#psi4 VS Multiplicity;nHits;#psi4", fNbins * 1.3, 0,
-           1.3 * fMaxValue, 2 * 3.14 / 0.01, 0, 2 * 3.14);
+      TH2F("", "#psi4 VS Multiplicity;nHits;#psi4", fModelNbins, fModelMin,
+           fModelMax, 2 * 3.14 / 0.01, 0, 2 * 3.14);
   fEcc5_VS_Multiplicity = TH2F("", "#epsilon5 VS Multiplicity;nHits;#epsilon5",
-                               fNbins * 1.3, 0, 1.3 * fMaxValue, 100, 0, 1);
+                               fModelNbins, fModelMin, fModelMax, 100, 0, 1);
   fPsi5_VS_Multiplicity =
-      TH2F("", "#psi5 VS Multiplicity;nHits;#psi5", fNbins * 1.3, 0,
-           1.3 * fMaxValue, 2 * 3.14 / 0.01, 0, 2 * 3.14);
+      TH2F("", "#psi5 VS Multiplicity;nHits;#psi5", fModelNbins, fModelMin,
+           fModelMax, 2 * 3.14 / 0.01, 0, 2 * 3.14);
 
   fGlauberFitHisto.SetName("glaub_fit_histo");
   fGlauberPlpHisto.SetName("glaub_plp_histo");
@@ -674,7 +684,7 @@ float Glauber::Fitter::FitGlauber(Float_t f0, Float_t f1, Float_t k0,
   const float phi = (float)((1 + TMath::Sqrt(5)) / 2);
 
   /* Model histogram binning, same as in SetGlauberFitHisto */
-  const TAxis axis(fNbins * 1.3, 0, 1.3 * fMaxValue);
+  const TAxis axis(fModelNbins, fModelMin, fModelMax);
   const int nBinsModel = axis.GetNbins() + 2;
   const double xmin = axis.GetXmin();
   const double xmax = axis.GetXmax();
@@ -691,7 +701,11 @@ float Glauber::Fitter::FitGlauber(Float_t f0, Float_t f1, Float_t k0,
   const int lowchibin = fFitMinBin;
   const int highchibin = fFitMaxBin < fNbins ? fFitMaxBin : fNbins;
 
-  /* Same as NormalizeGlauberFit + chi2/ndf and its error, on raw counts */
+  /*
+   * Same as NormalizeGlauberFit + chi2/ndf and its error, on raw counts.
+   * Bins with empty data (also when the model is empty) are not used, empty
+   * model bins with non-empty data are; ndf is the number of used bins.
+   */
   auto Chi2FromCounts = [&](const std::vector<float> &counts, float &chi2_out,
                             float &chi2_error_out) {
     int modelInt{0};
@@ -709,6 +723,7 @@ float Glauber::Fitter::FitGlauber(Float_t f0, Float_t f1, Float_t k0,
 
     float sum_chi2{0.};
     float sum_error{0.};
+    int ndf{0};
     for (int i = lowchibin; i <= highchibin; ++i) {
       const float data = fDataHisto.GetBinContent(i);
       if (data < 1.0)
@@ -717,12 +732,20 @@ float Glauber::Fitter::FitGlauber(Float_t f0, Float_t f1, Float_t k0,
       const float model = counts.at(i) * scale;
       const float model_error = sqrt(counts.at(i)) * scale;
       const float error2 = pow(data_error, 2) + pow(model_error, 2);
+      if (!(error2 > 0.))
+        continue;
       const float diff = model - data;
       sum_chi2 += pow(diff, 2) / error2;
       sum_error += pow(diff * (model_error - data_error) / error2, 2);
+      ndf++;
     }
-    chi2_out = sum_chi2 / (highchibin - lowchibin + 1);
-    chi2_error_out = 2 * pow(sum_error, 0.5) / (highchibin - lowchibin + 1);
+    if (ndf == 0) {
+      chi2_out = 1e10;
+      chi2_error_out = 0.;
+      return;
+    }
+    chi2_out = sum_chi2 / ndf;
+    chi2_error_out = 2 * pow(sum_error, 0.5) / ndf;
   };
 
   const unsigned int n_workers = NumThreads();
