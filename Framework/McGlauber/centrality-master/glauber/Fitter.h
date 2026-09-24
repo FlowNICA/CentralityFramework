@@ -13,14 +13,10 @@
 #include "TNamed.h"
 #include "TString.h"
 #include "TTree.h"
-#include <random>
+#include <memory>
 #include <vector>
-// #include "TMinuit.h"
 
 #ifdef __THREADS_ON__
-#include <atomic>
-#include <deque>
-#include <mutex>
 #include <thread>
 #endif
 
@@ -41,44 +37,14 @@ public:
   void SetGlauberFitHisto(Float_t f, Float_t mu, Float_t k, Float_t p,
                           Int_t n = 10000, Bool_t Norm2Data = true);
   void NormalizeGlauberFit();
-  void DrawHistos(Bool_t isSim = true, Bool_t isData = true,
-                  Bool_t isGlauber = false, Bool_t isNBD = false);
 
   float FitGlauber(Float_t f0, Float_t f1, Float_t k0, Float_t k1, Float_t p0,
                    Float_t p1, Int_t nEvents);
-  void FindMuGoldenSection(Float_t *mu, Float_t *chi2, float *chi2_error,
-                           Float_t mu_min, Float_t mu_max, Float_t f, Float_t k,
-                           Float_t p, Int_t nEvents = 10000, Int_t nIter = 5,
-                           int n = 0);
 
-  Float_t GetChi2(void) const;
-  Float_t GetChi2Error(void) const;
-
-  Float_t NBD(Float_t n, Float_t mu, Float_t k) const;
   void SetNBDhist(Float_t mu, Float_t k);
 
-  float Nancestors(float f) const;
   float Nancestors(float f, float npart, float ncoll) const;
   float NancestorsMax(float f) const;
-#ifndef __THREADS_ON__
-  bool BuildMultiplicity(float f, float mu, float k, float p, int i_start,
-                         int i_stop, int plp_start, int plp_stop, int n);
-#endif
-#ifdef __THREADS_ON__
-  bool BuildMultiplicity(float f, float mu, float k, float p, int i_start,
-                         int i_stop, int plp_start, int plp_stop,
-                         std::atomic<long unsigned int> &_progress);
-  // bool BuildMultiplicity(float f, float mu, float k, float p, int i_start,
-  // int i_stop, int plp_start, int plp_stop);
-#endif
-#ifndef __THREADS_ON__
-  bool BuildModel(const float range[2], int i_start, int i_stop, int plp_start,
-                  int plp_stop, int n);
-#endif
-#ifdef __THREADS_ON__
-  bool BuildModel(const float range[2], int i_start, int i_stop, int plp_start,
-                  int plp_stop, std::atomic<long unsigned int> &_progress);
-#endif
 
 #ifdef __THREADS_ON__
   void SetNthreads(unsigned int n) { fNthreads = n; }
@@ -97,7 +63,6 @@ public:
   void SetInputHisto(const TH1F &h) { fDataHisto = h; }
   void SetFitMinBin(Int_t min) { fFitMinBin = min; }
   void SetFitMaxBin(Int_t min) { fFitMaxBin = min; }
-  void SetNormMinBin(Int_t min) { fNormMinBin = min; }
   void SetBinSize(Float_t size) { fBinSize = size; }
   void SetOutDirName(TString name) { fOutDirName = name; }
   void SetMode(const TString mode) { fMode = mode; }
@@ -174,6 +139,15 @@ public:
   float GetOptimalChi2Error() const { return fOptimalChi2NdfError; }
 
 private:
+  /** Number of worker threads (always 1 without multithreading) **/
+  unsigned int NumThreads() const {
+#ifdef __THREADS_ON__
+    return fNthreads > 0 ? fNthreads : 1;
+#else
+    return 1;
+#endif
+  }
+
   /**   Data members  **/
   TH1F fBHisto;
   TH1F fNpartHisto;
@@ -197,10 +171,10 @@ private:
   TH1F fBestFitHisto;
   TH1F fBestPlpHisto;
   TH1F fBestSngHisto;
-  Int_t fNiter;
-  Float_t fFstep;
-  Float_t fKstep;
-  Float_t fPstep;
+  Int_t fNiter{10};
+  Float_t fFstep{0.};
+  Float_t fKstep{0.};
+  Float_t fPstep{0.};
 
   TH2F fGlauberPlpEv1Ev2;
   TH2F fB_VS_Multiplicity;
@@ -235,7 +209,7 @@ private:
   /* MC data */
   std::unique_ptr<TTree> fSimTree{nullptr};
 
-  Float_t fA{-1.}; // mass number
+  Float_t fA{-1.}; // mass number, not used in the fit
   Float_t fB{-1.};
   Float_t fNpart{-1.};
   Float_t fNcoll{-1.};
@@ -264,9 +238,6 @@ private:
   std::vector<float> fvEcc5{};
   std::vector<float> fvPsi5{};
 
-  std::vector<float> fvModel{};
-  std::vector<float> fvModelInput{};
-
   Float_t fMaxValue{-1.};
 
   Int_t fNbins{-1};
@@ -274,8 +245,6 @@ private:
 
   Int_t fFitMinBin{-1};
   Int_t fFitMaxBin{-1};
-
-  Int_t fNormMinBin{-1};
 
   TString fMode{"Default"};
 
@@ -289,14 +258,12 @@ private:
   float fOptimalChi2NdfError{0.};
 
   bool fUseNbd{false};
-  bool fFirstIteration{false};
 
 #ifdef __THREADS_ON__
-  std::mutex fMtx;
   unsigned int fNthreads{std::thread::hardware_concurrency()};
 #endif
 
-  ClassDef(Fitter, 2);
+  ClassDef(Fitter, 3);
 };
 } // namespace Glauber
 

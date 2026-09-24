@@ -16,13 +16,13 @@ void config()
 
   // Set up parameters for multiplicity fit
   float f_min  = 0.9;
-  float f_max  = 1.0;
+  float f_max  = 0.9;
   float f_step = 0.01;
-  float k_min  = 1;
-  float k_max  = 1001;
-  float k_step = 50;
-  float p_min  = 0.00;
-  float p_max  = 0.05;
+  float k_min  = 0.01;
+  float k_max  = 0.9;
+  float k_step = 0.01;
+  float p_min  = 0.003;
+  float p_max  = 0.006;
   float p_step = 0.001;
 
   // Set up fit ranges

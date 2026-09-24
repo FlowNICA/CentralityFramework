@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.0)
+cmake_minimum_required(VERSION 3.12)
 project(Centrality)
 set(CMAKE_MACOSX_RPATH 1)
 set(PROJECT_VERSION 1.0)
@@ -35,8 +35,8 @@ set(SOURCES
         src/Getter.cpp
         src/BordersFinder2D.cpp
         src/Container.cpp
-        glauber/Fitter.cpp 
-        glauber/FitterHelper.cpp 
+        glauber/Fitter.cpp
+        glauber/FitterHelper.cpp
         )
 
 string(REPLACE ".cpp" ".h" HEADERS "${SOURCES}")
@@ -158,4 +158,3 @@ install(FILES
         COMPONENT
         Devel
         )
-

@@ -104,15 +104,15 @@ inline void DrawHistos(const Fitter &fit, Bool_t isSim, Bool_t isData,
       hBestNpart_VS_Multiplicity.Write();
       hBestNcoll_VS_Multiplicity.Write();
       hBestEcc1_VS_Multiplicity.Write();
-      hBestEcc1_VS_Multiplicity.Write();
+      hBestPsi1_VS_Multiplicity.Write();
       hBestEcc2_VS_Multiplicity.Write();
-      hBestEcc2_VS_Multiplicity.Write();
+      hBestPsi2_VS_Multiplicity.Write();
       hBestEcc3_VS_Multiplicity.Write();
-      hBestEcc3_VS_Multiplicity.Write();
+      hBestPsi3_VS_Multiplicity.Write();
       hBestEcc4_VS_Multiplicity.Write();
-      hBestEcc4_VS_Multiplicity.Write();
+      hBestPsi4_VS_Multiplicity.Write();
       hBestEcc5_VS_Multiplicity.Write();
-      hBestEcc5_VS_Multiplicity.Write();
+      hBestPsi5_VS_Multiplicity.Write();
     }
   }
 
