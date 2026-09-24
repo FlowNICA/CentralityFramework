@@ -1,12 +1,12 @@
 void config()
 {
   // Set up input file from MC-Glauber
-  std::string inFileGlauberName = "~/Documents/Work/Dataset/Centrality/Bmn/out_xe124csi_277mb_6M.root";
-  std::string inTreeGlauberName = "nt_CsI_Xe124";
+  std::string inFileGlauberName = "~/glaub_auau_3gev_6M.root"; //"~/Documents/Work/Dataset/Centrality/Bmn/out_xe124csi_277mb_6M.root";
+  std::string inTreeGlauberName = "nt_Au3_Au3"; //"nt_CsI_Xe124";
 
   // Set up input file with data multiplicity
-  std::string inFileDataName = "~/Documents/Work/Dataset/Centrality/Bmn/run8_mult_negch_RunId_8000_8200_500k.root";
-  std::string inHistDataName = "hMultRun8_VtxZ020";
+  std::string inFileDataName = "~/star_mult_3gev_hist_500k.root";//"~/Documents/Work/Dataset/Centrality/Bmn/run8_mult_negch_RunId_8000_8200_500k.root";
+  std::string inHistDataName = "hRefMult"; //"hMultRun8_VtxZ020";
 
   // Set up output directory
   std::string outDir = ".";
@@ -15,19 +15,19 @@ void config()
   int Niter = 10;
 
   // Set up parameters for multiplicity fit
-  float f_min  = 0.84;
-  float f_max  = 0.84;
-  float f_step = 0.01;
+  float f_min  = 0.2;
+  float f_max  = 0.9;
+  float f_step = 0.1;
   float k_min  = 0.1;
-  float k_max  = 0.1;
+  float k_max  = 0.5;
   float k_step = 0.1;
-  float p_min  = 0.041;
-  float p_max  = 0.041;
-  float p_step = 0.001;
+  float p_min  = 0.01;
+  float p_max  = 0.03;
+  float p_step = 0.005;
 
   // Set up fit ranges
-  int multMin = 30;
-  int multMax = 130;
+  int multMin = 10;
+  int multMax = 110;
 
   // Set up bin size in the data histogram
   int bin_size = 1;
@@ -54,8 +54,8 @@ void config()
 
   const int nevents = 10*(int(data_hist->Integral(multMin,multMax)));
 
-  // Glauber::Fitter fitter ( std::move(glauber_tree), n_thr ); // in case of multithreading
-  Glauber::Fitter fitter ( std::move(glauber_tree)); // without multithreading
+  Glauber::Fitter fitter ( std::move(glauber_tree), n_thr ); // in case of multithreading
+  // Glauber::Fitter fitter ( std::move(glauber_tree)); // without multithreading
   fitter.SetMode(mode.c_str());
   fitter.SetMassNumber(f_min/2);
   fitter.SetInputHisto(*data_hist);

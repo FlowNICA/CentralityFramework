@@ -345,20 +345,20 @@ void Glauber::Fitter::SetGlauberFitHisto(float f, float mu, float k, float p,
   }
 
   bool isOver = false;
-  while (not isOver) {
-    isOver = true;
-    if (fFirstIteration)
-      std::cout << "\tGlauber::Fitter::SetGlauberFitHisto: Initialization, "
-                   "progress: ";
-    else
-      std::cout << "\tGlauber::Fitter::SetGlauberFitHisto: Constructing "
-                   "multiplicity, progress: ";
-    std::cout << "[" << v_progress << "/" << n << "]\r" << std::flush;
-    if ((int)v_progress < nentries && v_progress > 0)
-      isOver = false;
-    std::chrono::milliseconds dura(100);
-    std::this_thread::sleep_for(dura);
-  }
+  // while (not isOver) {
+  //   isOver = true;
+  //   if (fFirstIteration)
+  //     std::cout << "\tGlauber::Fitter::SetGlauberFitHisto: Initialization, "
+  //                  "progress: ";
+  //   else
+  //     std::cout << "\tGlauber::Fitter::SetGlauberFitHisto: Constructing "
+  //                  "multiplicity, progress: ";
+  //   std::cout << "[" << v_progress << "/" << n << "]\r" << std::flush;
+  //   if ((int)v_progress < nentries && v_progress > 0)
+  //     isOver = false;
+  //   std::chrono::milliseconds dura(100);
+  //   std::this_thread::sleep_for(dura);
+  // }
 
   for (auto &thread : v_thr)
     thread.join();
