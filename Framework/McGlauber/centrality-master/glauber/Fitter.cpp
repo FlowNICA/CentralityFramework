@@ -721,11 +721,13 @@ void Glauber::Fitter::SetNBDhist(float mu, float k) {
   std::random_device rd;
   std::mt19937 rngnum(rd());
   std::uniform_real_distribution<float> unirnd(0., 1.);
+  std::negative_binomial_distribution<> nbddist(k, (float)(k/(k+mu)));
   std::gamma_distribution<> gammadist((float)((mu * k) / (mu + k)),
                                       (float)((k + mu) / k));
 
   for (int i = 0; i < 1e5; ++i) {
-    fNbdHisto.Fill(gammadist(rngnum));
+    if (fUseNbd) fNbdHisto.Fill(nbddist(rngnum));
+            else fNbdHisto.Fill(gammadist(rngnum));
   }
 }
 
